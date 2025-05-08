@@ -6,7 +6,7 @@ use CainiaoPickupBundle\Entity\LogisticsDetail;
 use CainiaoPickupBundle\Entity\PickupOrder;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
-use DoctrineEnhanceBundle\Repository\CommonRepositoryAware;
+
 
 /**
  * @method LogisticsDetail|null find($id, $lockMode = null, $lockVersion = null)
@@ -16,7 +16,6 @@ use DoctrineEnhanceBundle\Repository\CommonRepositoryAware;
  */
 class LogisticsDetailRepository extends ServiceEntityRepository
 {
-    use CommonRepositoryAware;
 
     public function __construct(ManagerRegistry $registry)
     {
