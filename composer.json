@@ -13,7 +13,13 @@
     "symfony/dependency-injection": "^6.4",
     "symfony/config": "^6.4",
     "doctrine/dbal": "^4.0",
-    "doctrine/doctrine-bundle": "^2.13"
+    "doctrine/doctrine-bundle": "^2.13",
+    "symfony/console": "^6.4",
+    "tourze/doctrine-timestamp-bundle": "0.0.*",
+    "tourze/doctrine-snowflake-bundle": "0.1.*",
+    "tourze/doctrine-indexed-bundle": "0.0.*",
+    "doctrine/persistence": "^3.1 || ^4",
+    "symfony/http-foundation": "^6.4"
   },
   "autoload": {
     "psr-4": {
