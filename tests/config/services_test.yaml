@@ -1,0 +1,16 @@
+services:
+  # 在测试环境中将服务设置为公共
+  CainiaoPickupBundle\Service\PickupService:
+    public: true
+    
+  CainiaoPickupBundle\Service\CainiaoHttpClient:
+    public: true
+    
+  CainiaoPickupBundle\Repository\PickupOrderRepository:
+    public: true
+    
+  CainiaoPickupBundle\Repository\CainiaoConfigRepository:
+    public: true
+    
+  CainiaoPickupBundle\Repository\LogisticsDetailRepository:
+    public: true

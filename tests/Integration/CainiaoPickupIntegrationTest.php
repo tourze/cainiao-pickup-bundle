@@ -10,7 +10,6 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /**
  * @group integration
- * @group skip
  */
 class CainiaoPickupIntegrationTest extends KernelTestCase
 {
@@ -27,10 +26,7 @@ class CainiaoPickupIntegrationTest extends KernelTestCase
      */
     protected static function getKernelClass(): string
     {
-        // 由于这是一个Bundle测试，需要在实际项目中提供一个Kernel类
-        // 这里暂时跳过测试，实际使用时应替换为实际的Kernel类
-        self::markTestSkipped('需要配置Kernel类才能运行集成测试');
-        return 'App\Kernel';
+        return TestKernel::class;
     }
 
     public function testServiceWiring_servicesAreRegistered(): void
