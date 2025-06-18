@@ -11,23 +11,13 @@ use Tourze\DoctrineTimestampBundle\Traits\TimestampableAware;
 use Tourze\DoctrineTrackBundle\Attribute\TrackColumn;
 use Tourze\DoctrineUserBundle\Attribute\CreatedByColumn;
 use Tourze\DoctrineUserBundle\Attribute\UpdatedByColumn;
-use Tourze\EasyAdmin\Attribute\Action\Creatable;
-use Tourze\EasyAdmin\Attribute\Action\Editable;
-use Tourze\EasyAdmin\Attribute\Column\BoolColumn;
-use Tourze\EasyAdmin\Attribute\Column\ExportColumn;
-use Tourze\EasyAdmin\Attribute\Column\ListColumn;
-use Tourze\EasyAdmin\Attribute\Field\FormField;
 
-#[Creatable]
-#[Editable]
 #[ORM\Entity(repositoryClass: CainiaoConfigRepository::class)]
 #[ORM\Table(name: 'cainiao_config', options: ['comment' => '菜鸟开放平台配置'])]
 class CainiaoConfig
 {
     use TimestampableAware;
 
-    #[ExportColumn]
-    #[ListColumn(order: -1, sorter: true)]
     #[ORM\Id]
     #[ORM\GeneratedValue(strategy: 'CUSTOM')]
     #[ORM\CustomIdGenerator(SnowflakeIdGenerator::class)]
@@ -42,43 +32,29 @@ class CainiaoConfig
     #[ORM\Column(nullable: true, options: ['comment' => '更新人'])]
     private ?string $updatedBy = null;
 
-    #[BoolColumn]
     #[IndexColumn]
     #[TrackColumn]
     #[ORM\Column(type: Types::BOOLEAN, nullable: true, options: ['comment' => '有效', 'default' => 0])]
-    #[ListColumn(order: 97)]
-    #[FormField(order: 97)]
     private ?bool $valid = false;
 
-    #[ListColumn]
-    #[FormField]
     #[ORM\Column(type: 'string', length: 64, options: ['comment' => '配置名称'])]
     private string $name;
 
-    #[ListColumn]
-    #[FormField]
     #[ORM\Column(type: 'string', length: 64, options: ['comment' => 'AppKey'])]
     private string $appKey;
 
-    #[FormField]
     #[ORM\Column(type: 'string', length: 64, options: ['comment' => 'AppSecret'])]
     private string $appSecret;
 
-    #[ListColumn]
-    #[FormField]
     #[ORM\Column(type: 'string', length: 64, options: ['comment' => 'AccessCode'])]
     private string $accessCode;
 
-    #[ListColumn]
-    #[FormField]
     #[ORM\Column(length: 100, options: ['comment' => 'logistic_provider_id'])]
     private ?string $providerId = null;
 
-    #[FormField]
     #[ORM\Column(type: 'string', length: 255, options: ['comment' => 'API网关地址'])]
     private string $apiGateway = 'https://global.link.cainiao.com';
 
-    #[FormField]
     #[ORM\Column(type: 'string', length: 255, nullable: true, options: ['comment' => '备注'])]
     private ?string $remark = null;
 
