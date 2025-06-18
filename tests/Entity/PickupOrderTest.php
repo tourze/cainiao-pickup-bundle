@@ -92,8 +92,6 @@ class PickupOrderTest extends TestCase
         $this->order->setExternalUserId('user123');
         
         $result = $this->order->toPreQueryApiFormat();
-        
-        $this->assertIsArray($result);
         $this->assertArrayHasKey('queryCondition', $result);
         $this->assertArrayHasKey('senderInfo', $result['queryCondition']);
         $this->assertArrayHasKey('receiverInfo', $result['queryCondition']);
@@ -113,8 +111,6 @@ class PickupOrderTest extends TestCase
         $this->order->setExternalUserMobile('13888888888');
         
         $result = $this->order->toCreateOrderApiFormat();
-        
-        $this->assertIsArray($result);
         $this->assertArrayHasKey('senderInfo', $result);
         $this->assertArrayHasKey('receiverInfo', $result);
         $this->assertArrayHasKey('itemType', $result);
@@ -138,8 +134,6 @@ class PickupOrderTest extends TestCase
         $this->order->setExternalUserId('user123');
         
         $result = $this->order->toModifyOrderApiFormat();
-        
-        $this->assertIsArray($result);
         $this->assertArrayHasKey('orderId', $result);
         $this->assertArrayHasKey('cnAccountId', $result);
         $this->assertArrayHasKey('senderInfo', $result);
@@ -157,8 +151,6 @@ class PickupOrderTest extends TestCase
         $this->order->setCancelReason('用户取消');
         
         $result = $this->order->toCancelOrderApiFormat();
-        
-        $this->assertIsArray($result);
         $this->assertArrayHasKey('orderId', $result);
         $this->assertArrayHasKey('reasonDesc', $result);
         $this->assertArrayHasKey('cnAccountId', $result);

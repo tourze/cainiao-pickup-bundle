@@ -195,7 +195,6 @@ class CainiaoHttpClientTest extends TestCase
         $result = $this->cainiaoHttpClient->queryOrderDetail($this->order);
 
         // 断言
-        $this->assertIsArray($result);
         $this->assertEquals('CN123456', $result['logisticsOrderCode']);
         $this->assertEquals('SF123456789', $result['mailNo']);
         $this->assertEquals('SF', $result['cpCode']);
@@ -316,7 +315,6 @@ class CainiaoHttpClientTest extends TestCase
         $result = $this->cainiaoHttpClient->queryLogisticsDetail($this->order);
 
         // 断言
-        $this->assertIsArray($result);
         $this->assertArrayHasKey('logisticsDetails', $result);
         $this->assertCount(1, $result['logisticsDetails']);
         $this->assertEquals('100', $result['logisticsDetails'][0]['status']);

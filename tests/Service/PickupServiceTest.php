@@ -210,7 +210,6 @@ class PickupServiceTest extends TestCase
         $result = $this->pickupService->getOrdersByStatus(OrderStatusEnum::CREATE);
 
         // 断言
-        $this->assertIsArray($result);
         $this->assertCount(1, $result);
         $this->assertSame($this->order, $result[0]);
     }

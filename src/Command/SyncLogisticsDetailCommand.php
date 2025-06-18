@@ -22,6 +22,8 @@ use Symfony\Component\Console\Output\OutputInterface;
 )]
 class SyncLogisticsDetailCommand extends Command
 {
+    public const NAME = 'cainiao:pickup:sync-logistics';
+    
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly PickupOrderRepository $pickupOrderRepository,

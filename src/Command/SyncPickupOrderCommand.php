@@ -19,6 +19,8 @@ use Symfony\Component\Console\Output\OutputInterface;
 )]
 class SyncPickupOrderCommand extends Command
 {
+    public const NAME = 'cainiao:pickup:sync-orders';
+    
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly PickupOrderRepository $pickupOrderRepository,
