@@ -79,7 +79,7 @@ class CainiaoConfigTest extends TestCase
 
     public function testTimestampProperties_canBeSetAndRetrieved(): void
     {
-        $now = new \DateTime();
+        $now = new \DateTimeImmutable();
         
         $this->config->setCreateTime($now);
         $this->config->setUpdateTime($now);

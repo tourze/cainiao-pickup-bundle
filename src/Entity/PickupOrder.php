@@ -9,14 +9,14 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Tourze\DoctrineSnowflakeBundle\Service\SnowflakeIdGenerator;
 use Tourze\DoctrineTimestampBundle\Traits\TimestampableAware;
-use Tourze\DoctrineUserBundle\Attribute\CreatedByColumn;
-use Tourze\DoctrineUserBundle\Attribute\UpdatedByColumn;
+use Tourze\DoctrineUserBundle\Traits\BlameableAware;
 
 #[ORM\Entity(repositoryClass: PickupOrderRepository::class)]
 #[ORM\Table(name: 'cainiao_pickup_order', options: ['comment' => '菜鸟上门取件订单'])]
-class PickupOrder
+class PickupOrder implements \Stringable
 {
     use TimestampableAware;
+    use BlameableAware;
 
     #[ORM\Id]
     #[ORM\GeneratedValue(strategy: 'CUSTOM')]
@@ -24,15 +24,8 @@ class PickupOrder
     #[ORM\Column(type: Types::BIGINT, nullable: false, options: ['comment' => 'ID'])]
     private ?string $id = null;
 
-    #[CreatedByColumn]
-    #[ORM\Column(nullable: true, options: ['comment' => '创建人'])]
-    private ?string $createdBy = null;
 
-    #[UpdatedByColumn]
-    #[ORM\Column(nullable: true, options: ['comment' => '更新人'])]
-    private ?string $updatedBy = null;
-
-    #[ORM\Column(type: 'string', length: 64, options: ['comment' => '取件单号'])]
+    #[ORM\Column(type: Types::STRING, length: 64, options: ['comment' => '取件单号'])]
     private string $orderCode;
 
     #[ORM\OneToOne(targetEntity: AddressInfo::class, cascade: ['persist', 'remove'])]
@@ -43,56 +36,56 @@ class PickupOrder
     #[ORM\JoinColumn(nullable: false)]
     private AddressInfo $receiverInfo;
 
-    #[ORM\Column(type: 'string', enumType: ItemTypeEnum::class, options: ['comment' => '物品类型'])]
+    #[ORM\Column(type: Types::STRING, enumType: ItemTypeEnum::class, options: ['comment' => '物品类型'])]
     private ItemTypeEnum $itemType;
 
-    #[ORM\Column(type: 'decimal', precision: 10, scale: 2, options: ['comment' => '物品重量(kg)'])]
+    #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2, options: ['comment' => '物品重量(kg)'])]
     private float $weight;
 
-    #[ORM\Column(type: 'string', enumType: OrderStatusEnum::class, options: ['comment' => '订单状态'])]
+    #[ORM\Column(type: Types::STRING, enumType: OrderStatusEnum::class, options: ['comment' => '订单状态'])]
     private OrderStatusEnum $status = OrderStatusEnum::CREATE;
 
-    #[ORM\Column(type: 'string', length: 64, options: ['comment' => '外部用户ID'])]
+    #[ORM\Column(type: Types::STRING, length: 64, options: ['comment' => '外部用户ID'])]
     private ?string $externalUserId = null;
 
-    #[ORM\Column(type: 'string', length: 255, nullable: true, options: ['comment' => '备注'])]
+    #[ORM\Column(type: Types::STRING, length: 255, nullable: true, options: ['comment' => '备注'])]
     private ?string $remark = null;
 
-    #[ORM\Column(type: 'string', length: 32, nullable: true, options: ['comment' => '预约取件时间段开始时间'])]
+    #[ORM\Column(type: Types::STRING, length: 32, nullable: true, options: ['comment' => '预约取件时间段开始时间'])]
     private ?string $expectPickupTimeStart = null;
 
-    #[ORM\Column(type: 'string', length: 32, nullable: true, options: ['comment' => '预约取件时间段结束时间'])]
+    #[ORM\Column(type: Types::STRING, length: 32, nullable: true, options: ['comment' => '预约取件时间段结束时间'])]
     private ?string $expectPickupTimeEnd = null;
 
-    #[ORM\Column(type: 'string', length: 64, nullable: true, options: ['comment' => '菜鸟订单号'])]
+    #[ORM\Column(type: Types::STRING, length: 64, nullable: true, options: ['comment' => '菜鸟订单号'])]
     private ?string $cainiaoOrderCode = null;
 
-    #[ORM\Column(type: 'string', length: 64, nullable: true, options: ['comment' => '运单号'])]
+    #[ORM\Column(type: Types::STRING, length: 64, nullable: true, options: ['comment' => '运单号'])]
     private ?string $mailNo = null;
 
-    #[ORM\Column(type: 'string', length: 32, nullable: true, options: ['comment' => '物品数量'])]
+    #[ORM\Column(type: Types::STRING, length: 32, nullable: true, options: ['comment' => '物品数量'])]
     private ?string $itemQuantity = null;
 
-    #[ORM\Column(type: 'decimal', precision: 10, scale: 2, nullable: true, options: ['comment' => '物品价值(元)'])]
+    #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2, nullable: true, options: ['comment' => '物品价值(元)'])]
     private ?float $itemValue = null;
 
-    #[ORM\Column(type: 'string', length: 32, nullable: true, options: ['comment' => '快递员姓名'])]
+    #[ORM\Column(type: Types::STRING, length: 32, nullable: true, options: ['comment' => '快递员姓名'])]
     private ?string $courierName = null;
 
-    #[ORM\Column(type: 'string', length: 20, nullable: true, options: ['comment' => '快递员电话'])]
+    #[ORM\Column(type: Types::STRING, length: 20, nullable: true, options: ['comment' => '快递员电话'])]
     private ?string $courierPhone = null;
 
-    #[ORM\Column(type: 'string', length: 32, nullable: true, options: ['comment' => '快递公司编码'])]
+    #[ORM\Column(type: Types::STRING, length: 32, nullable: true, options: ['comment' => '快递公司编码'])]
     private ?string $cpCode = null;
 
-    #[ORM\Column(type: 'string', length: 64, nullable: true, options: ['comment' => '快递公司名称'])]
+    #[ORM\Column(type: Types::STRING, length: 64, nullable: true, options: ['comment' => '快递公司名称'])]
     private ?string $cpName = null;
 
-    #[ORM\Column(type: 'datetime', nullable: true, options: ['comment' => '取件时间'])]
-    private ?\DateTimeInterface $pickupTime = null;
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true, options: ['comment' => '取件时间'])]
+    private ?\DateTimeImmutable $pickupTime = null;
 
-    #[ORM\Column(type: 'datetime', nullable: true, options: ['comment' => '最后更新时间'])]
-    private ?\DateTimeInterface $lastUpdateTime = null;
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true, options: ['comment' => '最后更新时间'])]
+    private ?\DateTimeImmutable $lastUpdateTime = null;
 
     #[ORM\Column(type: Types::STRING, length: 255, nullable: true, options: ['comment' => '取消原因'])]
     private ?string $cancelReason = null;
@@ -104,7 +97,7 @@ class PickupOrder
     #[ORM\JoinColumn(nullable: false, options: ['comment' => '菜鸟开放平台配置'])]
     private CainiaoConfig $config;
 
-    #[ORM\Column(length: 20, options: ['comment' => '外部用户对应的手机号'])]
+    #[ORM\Column(type: Types::STRING, length: 20, options: ['comment' => '外部用户对应的手机号'])]
     private ?string $externalUserMobile = null;
 
     public function getId(): ?string
@@ -112,28 +105,9 @@ class PickupOrder
         return $this->id;
     }
 
-    public function setCreatedBy(?string $createdBy): self
+    public function __toString(): string
     {
-        $this->createdBy = $createdBy;
-
-        return $this;
-    }
-
-    public function getCreatedBy(): ?string
-    {
-        return $this->createdBy;
-    }
-
-    public function setUpdatedBy(?string $updatedBy): self
-    {
-        $this->updatedBy = $updatedBy;
-
-        return $this;
-    }
-
-    public function getUpdatedBy(): ?string
-    {
-        return $this->updatedBy;
+        return sprintf('%s (%s)', $this->orderCode, $this->status->value);
     }
 
     // Getters and Setters
@@ -353,24 +327,24 @@ class PickupOrder
         return $this;
     }
 
-    public function getPickupTime(): ?\DateTimeInterface
+    public function getPickupTime(): ?\DateTimeImmutable
     {
         return $this->pickupTime;
     }
 
-    public function setPickupTime(?\DateTimeInterface $pickupTime): self
+    public function setPickupTime(?\DateTimeImmutable $pickupTime): self
     {
         $this->pickupTime = $pickupTime;
 
         return $this;
     }
 
-    public function getLastUpdateTime(): ?\DateTimeInterface
+    public function getLastUpdateTime(): ?\DateTimeImmutable
     {
         return $this->lastUpdateTime;
     }
 
-    public function setLastUpdateTime(?\DateTimeInterface $lastUpdateTime): self
+    public function setLastUpdateTime(?\DateTimeImmutable $lastUpdateTime): self
     {
         $this->lastUpdateTime = $lastUpdateTime;
 
@@ -533,7 +507,7 @@ class PickupOrder
         }
 
         if (!empty($data['latestLogisticsDetail']['updateTime'])) {
-            $this->setLastUpdateTime(new \DateTime($data['latestLogisticsDetail']['updateTime']));
+            $this->setLastUpdateTime(new \DateTimeImmutable($data['latestLogisticsDetail']['updateTime']));
         }
         if (isset($data['orderStatusCode'])) {
             $this->setStatus(OrderStatusEnum::from($data['orderStatusCode']));

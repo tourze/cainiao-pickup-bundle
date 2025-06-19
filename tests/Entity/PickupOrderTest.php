@@ -200,6 +200,6 @@ class PickupOrderTest extends TestCase
         $this->assertSame(OrderStatusEnum::WAREHOUSE_ACCEPT, $this->order->getStatus());
         $this->assertSame(2.0, $this->order->getWeight());
         $this->assertSame(20.00, $this->order->getItemValue());
-        $this->assertInstanceOf(\DateTime::class, $this->order->getLastUpdateTime());
+        $this->assertInstanceOf(\DateTimeImmutable::class, $this->order->getLastUpdateTime());
     }
 } 

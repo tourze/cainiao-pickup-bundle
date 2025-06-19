@@ -6,12 +6,14 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Tourze\DoctrineSnowflakeBundle\Service\SnowflakeIdGenerator;
 use Tourze\DoctrineTimestampBundle\Traits\TimestampableAware;
+use Tourze\DoctrineUserBundle\Traits\BlameableAware;
 
 #[ORM\Entity]
 #[ORM\Table(name: 'cainiao_logistics_detail', options: ['comment' => '物流详情'])]
-class LogisticsDetail
+class LogisticsDetail implements \Stringable
 {
     use TimestampableAware;
+    use BlameableAware;
 
     #[ORM\Id]
     #[ORM\GeneratedValue(strategy: 'CUSTOM')]
@@ -23,36 +25,41 @@ class LogisticsDetail
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE', options: ['comment' => '取件订单'])]
     private PickupOrder $order;
 
-    #[ORM\Column(type: 'string', length: 64, options: ['comment' => '运单号'])]
+    #[ORM\Column(type: Types::STRING, length: 64, options: ['comment' => '运单号'])]
     private string $mailNo;
 
-    #[ORM\Column(type: 'string', length: 32, options: ['comment' => '物流状态'])]
+    #[ORM\Column(type: Types::STRING, length: 32, options: ['comment' => '物流状态'])]
     private string $logisticsStatus;
 
-    #[ORM\Column(type: 'string', length: 255, options: ['comment' => '物流描述'])]
+    #[ORM\Column(type: Types::STRING, length: 255, options: ['comment' => '物流描述'])]
     private string $logisticsDescription;
 
-    #[ORM\Column(type: 'datetime_immutable', options: ['comment' => '物流时间'])]
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, options: ['comment' => '物流时间'])]
     private \DateTimeImmutable $logisticsTime;
 
-    #[ORM\Column(type: 'string', length: 64, nullable: true, options: ['comment' => '城市'])]
+    #[ORM\Column(type: Types::STRING, length: 64, nullable: true, options: ['comment' => '城市'])]
     private ?string $city = null;
 
-    #[ORM\Column(type: 'string', length: 64, nullable: true, options: ['comment' => '地区'])]
+    #[ORM\Column(type: Types::STRING, length: 64, nullable: true, options: ['comment' => '地区'])]
     private ?string $area = null;
 
-    #[ORM\Column(type: 'string', length: 255, nullable: true, options: ['comment' => '详细地址'])]
+    #[ORM\Column(type: Types::STRING, length: 255, nullable: true, options: ['comment' => '详细地址'])]
     private ?string $address = null;
 
-    #[ORM\Column(type: 'string', length: 32, nullable: true, options: ['comment' => '快递员姓名'])]
+    #[ORM\Column(type: Types::STRING, length: 32, nullable: true, options: ['comment' => '快递员姓名'])]
     private ?string $courierName = null;
 
-    #[ORM\Column(type: 'string', length: 20, nullable: true, options: ['comment' => '快递员电话'])]
+    #[ORM\Column(type: Types::STRING, length: 20, nullable: true, options: ['comment' => '快递员电话'])]
     private ?string $courierPhone = null;
 
     public function getId(): ?string
     {
         return $this->id;
+    }
+
+    public function __toString(): string
+    {
+        return sprintf('%s - %s', $this->logisticsStatus, $this->logisticsDescription);
     }
 
     public function getOrder(): PickupOrder

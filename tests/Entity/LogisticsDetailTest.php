@@ -68,7 +68,7 @@ class LogisticsDetailTest extends TestCase
 
     public function testTimestampProperties_canBeSetAndRetrieved(): void
     {
-        $now = new \DateTime();
+        $now = new \DateTimeImmutable();
         
         $this->logisticsDetail->setCreateTime($now);
         $this->logisticsDetail->setUpdateTime($now);

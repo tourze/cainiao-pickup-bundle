@@ -9,14 +9,14 @@ use Tourze\DoctrineIndexedBundle\Attribute\IndexColumn;
 use Tourze\DoctrineSnowflakeBundle\Service\SnowflakeIdGenerator;
 use Tourze\DoctrineTimestampBundle\Traits\TimestampableAware;
 use Tourze\DoctrineTrackBundle\Attribute\TrackColumn;
-use Tourze\DoctrineUserBundle\Attribute\CreatedByColumn;
-use Tourze\DoctrineUserBundle\Attribute\UpdatedByColumn;
+use Tourze\DoctrineUserBundle\Traits\BlameableAware;
 
 #[ORM\Entity(repositoryClass: CainiaoConfigRepository::class)]
 #[ORM\Table(name: 'cainiao_config', options: ['comment' => '菜鸟开放平台配置'])]
-class CainiaoConfig
+class CainiaoConfig implements \Stringable
 {
     use TimestampableAware;
+    use BlameableAware;
 
     #[ORM\Id]
     #[ORM\GeneratedValue(strategy: 'CUSTOM')]
@@ -24,38 +24,31 @@ class CainiaoConfig
     #[ORM\Column(type: Types::BIGINT, nullable: false, options: ['comment' => 'ID'])]
     private ?string $id = null;
 
-    #[CreatedByColumn]
-    #[ORM\Column(nullable: true, options: ['comment' => '创建人'])]
-    private ?string $createdBy = null;
-
-    #[UpdatedByColumn]
-    #[ORM\Column(nullable: true, options: ['comment' => '更新人'])]
-    private ?string $updatedBy = null;
 
     #[IndexColumn]
     #[TrackColumn]
     #[ORM\Column(type: Types::BOOLEAN, nullable: true, options: ['comment' => '有效', 'default' => 0])]
     private ?bool $valid = false;
 
-    #[ORM\Column(type: 'string', length: 64, options: ['comment' => '配置名称'])]
+    #[ORM\Column(type: Types::STRING, length: 64, options: ['comment' => '配置名称'])]
     private string $name;
 
-    #[ORM\Column(type: 'string', length: 64, options: ['comment' => 'AppKey'])]
+    #[ORM\Column(type: Types::STRING, length: 64, options: ['comment' => 'AppKey'])]
     private string $appKey;
 
-    #[ORM\Column(type: 'string', length: 64, options: ['comment' => 'AppSecret'])]
+    #[ORM\Column(type: Types::STRING, length: 64, options: ['comment' => 'AppSecret'])]
     private string $appSecret;
 
-    #[ORM\Column(type: 'string', length: 64, options: ['comment' => 'AccessCode'])]
+    #[ORM\Column(type: Types::STRING, length: 64, options: ['comment' => 'AccessCode'])]
     private string $accessCode;
 
-    #[ORM\Column(length: 100, options: ['comment' => 'logistic_provider_id'])]
+    #[ORM\Column(type: Types::STRING, length: 100, options: ['comment' => 'logistic_provider_id'])]
     private ?string $providerId = null;
 
-    #[ORM\Column(type: 'string', length: 255, options: ['comment' => 'API网关地址'])]
+    #[ORM\Column(type: Types::STRING, length: 255, options: ['comment' => 'API网关地址'])]
     private string $apiGateway = 'https://global.link.cainiao.com';
 
-    #[ORM\Column(type: 'string', length: 255, nullable: true, options: ['comment' => '备注'])]
+    #[ORM\Column(type: Types::STRING, length: 255, nullable: true, options: ['comment' => '备注'])]
     private ?string $remark = null;
 
     public function getId(): ?string
@@ -63,28 +56,9 @@ class CainiaoConfig
         return $this->id;
     }
 
-    public function setCreatedBy(?string $createdBy): self
+    public function __toString(): string
     {
-        $this->createdBy = $createdBy;
-
-        return $this;
-    }
-
-    public function getCreatedBy(): ?string
-    {
-        return $this->createdBy;
-    }
-
-    public function setUpdatedBy(?string $updatedBy): self
-    {
-        $this->updatedBy = $updatedBy;
-
-        return $this;
-    }
-
-    public function getUpdatedBy(): ?string
-    {
-        return $this->updatedBy;
+        return $this->name;
     }
 
     public function isValid(): ?bool

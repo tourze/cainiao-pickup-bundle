@@ -14,7 +14,7 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
 #[AsCommand(
-    name: 'cainiao:pickup:sync-orders',
+    name: self::NAME,
     description: '同步菜鸟上门取件订单详情',
 )]
 class SyncPickupOrderCommand extends Command
@@ -45,7 +45,7 @@ class SyncPickupOrderCommand extends Command
         $orderCode = $input->getOption('order-code');
 
         try {
-            if ($orderCode) {
+            if ($orderCode !== null) {
                 // 同步指定订单
                 $order = $this->pickupOrderRepository->findByOrderCode($orderCode);
                 if (!$order) {
