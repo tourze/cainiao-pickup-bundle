@@ -48,7 +48,7 @@ class SyncPickupOrderCommand extends Command
             if ($orderCode !== null) {
                 // 同步指定订单
                 $order = $this->pickupOrderRepository->findByOrderCode($orderCode);
-                if (!$order) {
+                if ($order === null) {
                     throw new \RuntimeException(sprintf('Order not found: %s', $orderCode));
                 }
                 $this->syncOrder($order);

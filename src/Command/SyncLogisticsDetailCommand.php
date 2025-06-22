@@ -52,7 +52,7 @@ class SyncLogisticsDetailCommand extends Command
             if ($orderCode !== null) {
                 // 同步指定订单
                 $order = $this->pickupOrderRepository->findByOrderCode($orderCode);
-                if (!$order) {
+                if ($order === null) {
                     throw new \RuntimeException(sprintf('Order not found: %s', $orderCode));
                 }
                 $this->syncLogistics($order, $output);
@@ -85,7 +85,7 @@ class SyncLogisticsDetailCommand extends Command
 
     private function syncLogistics(PickupOrder $order, OutputInterface $output): void
     {
-        if (!$order->getMailNo()) {
+        if ($order->getMailNo() === null) {
             throw new \RuntimeException(sprintf('Order %s has no mail number', $order->getOrderCode()));
         }
 

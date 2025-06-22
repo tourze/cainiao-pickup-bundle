@@ -89,34 +89,6 @@ class LogisticsDetailRepositoryTest extends TestCase
         $this->assertEquals('派送中', $result->getLogisticsDescription());
     }
 
-    /**
-     * @group skip
-     */
-    public function testDeleteByOrder_deletesAllDetails(): void
-    {
-        $this->markTestSkipped('由于需要模拟Doctrine复杂对象，暂时跳过此测试');
-        
-        /* 
-        // 由于Doctrine抽象查询类方法难以模拟，这里简化测试，仅检查createQueryBuilder被调用
-        $queryBuilder = $this->createMock(QueryBuilder::class);
-         
-        // 设置基本的模拟行为
-        $queryBuilder->method('delete')->willReturnSelf();
-        $queryBuilder->method('where')->willReturnSelf();
-        $queryBuilder->method('setParameter')->willReturnSelf();
- 
-        // 设置模拟行为
-        $this->repository->expects($this->once())
-            ->method('createQueryBuilder')
-            ->willReturn($queryBuilder);
-
-        // 执行测试
-        $this->repository->deleteByOrder($this->order);
-        */
-        
-        // 如果执行到这里，测试通过
-        $this->addToAssertionCount(1);
-    }
 
     /**
      * 创建物流详情测试数据

@@ -237,35 +237,4 @@ class CainiaoHttpClient
         return base64_encode(md5($stringToSign, true));
     }
 
-    /**
-     * 递归排序
-     */
-    private function ksortRecursive(array &$array): bool
-    {
-        ksort($array);
-        foreach ($array as &$value) {
-            if (is_array($value)) {
-                $this->ksortRecursive($value);
-            }
-        }
-
-        return true;
-    }
-
-    /**
-     * 构建查询字符串
-     */
-    private function buildQueryString(array $params): string
-    {
-        $pairs = [];
-        foreach ($params as $key => $value) {
-            if (is_array($value)) {
-                $pairs[] = $key . '=' . $this->buildQueryString($value);
-            } else {
-                $pairs[] = $key . '=' . $value;
-            }
-        }
-
-        return implode('&', $pairs);
-    }
 }

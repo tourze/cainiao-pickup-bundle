@@ -50,36 +50,4 @@ class PickupOrderRepositoryTest extends TestCase
         $this->assertEquals('TEST123456', $result->getOrderCode());
     }
 
-    /**
-     * @group skip
-     */
-    public function testFindByOrderCode_returnsOrder(): void
-    {
-        $this->markTestSkipped('由于Doctrine元数据初始化问题，暂时跳过此测试');
-        
-        // 如果执行到这里，测试通过
-        $this->addToAssertionCount(1);
-    }
-
-    /**
-     * @group skip
-     */
-    public function testFindByOrderCode_whenNotFound_returnsNull(): void
-    {
-        $this->markTestSkipped('由于Doctrine元数据初始化问题，暂时跳过此测试');
-        
-        // 如果执行到这里，测试通过
-        $this->addToAssertionCount(1);
-    }
-
-    /**
-     * @group skip
-     */
-    public function testFindUnfinishedOrders_returnsCorrectOrders(): void
-    {
-        $this->markTestSkipped('由于需要模拟Doctrine复杂对象，暂时跳过此测试');
-        
-        // 如果执行到这里，测试通过
-        $this->addToAssertionCount(1);
-    }
 } 

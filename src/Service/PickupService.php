@@ -32,7 +32,7 @@ class PickupService
     {
         // 获取有效的配置
         $config = $this->cainiaoConfigRepository->findValidConfig();
-        if (!$config) {
+        if ($config === null) {
             throw new \RuntimeException('No valid Cainiao config found');
         }
 

@@ -400,7 +400,7 @@ class PickupOrder implements \Stringable
             ],
         ];
 
-        if ($this->externalUserId) {
+        if ($this->externalUserId !== null) {
             $data['queryCondition']['externalUserId'] = $this->externalUserId;
         }
 
@@ -431,12 +431,12 @@ class PickupOrder implements \Stringable
         ];
 
         // 添加可选字段
-        if ($this->expectPickupTimeStart && $this->expectPickupTimeEnd) {
+        if ($this->expectPickupTimeStart !== null && $this->expectPickupTimeEnd !== null) {
             $data['appointGotStartTime'] = $this->getExpectPickupTimeStart();
             $data['appointGotEndTime'] = $this->getExpectPickupTimeEnd();
         }
 
-        if ($this->remark) {
+        if ($this->remark !== null) {
             $data['userRemark'] = $this->getRemark();
         }
 
@@ -458,12 +458,12 @@ class PickupOrder implements \Stringable
         ];
 
         // 添加可选字段
-        if ($this->expectPickupTimeStart && $this->expectPickupTimeEnd) {
+        if ($this->expectPickupTimeStart !== null && $this->expectPickupTimeEnd !== null) {
             $data['appointGotStartTime'] = $this->getExpectPickupTimeStart();
             $data['appointGotEndTime'] = $this->getExpectPickupTimeEnd();
         }
 
-        if ($this->remark) {
+        if ($this->remark !== null) {
             $data['userRemark'] = $this->remark;
         }
 

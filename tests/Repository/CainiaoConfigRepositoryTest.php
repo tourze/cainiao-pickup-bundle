@@ -54,25 +54,4 @@ class CainiaoConfigRepositoryTest extends TestCase
         $this->assertTrue($result->isValid());
     }
 
-    /**
-     * @group skip
-     */
-    public function testFindValidConfig_returnsCorrectConfig(): void
-    {
-        $this->markTestSkipped('由于需要模拟Doctrine复杂对象，暂时跳过此测试');
-        
-        // 如果执行到这里，测试通过
-        $this->addToAssertionCount(1);
-    }
-
-    /**
-     * @group skip
-     */
-    public function testFindValidConfig_whenNoValidConfig_returnsNull(): void
-    {
-        $this->markTestSkipped('由于需要模拟Doctrine复杂对象，暂时跳过此测试');
-        
-        // 如果执行到这里，测试通过
-        $this->addToAssertionCount(1);
-    }
 } 
