@@ -5,6 +5,7 @@ namespace CainiaoPickupBundle\Command;
 use CainiaoPickupBundle\Entity\LogisticsDetail;
 use CainiaoPickupBundle\Entity\PickupOrder;
 use CainiaoPickupBundle\Enum\OrderStatusEnum;
+use CainiaoPickupBundle\Exception\OrderException;
 use CainiaoPickupBundle\Repository\LogisticsDetailRepository;
 use CainiaoPickupBundle\Repository\PickupOrderRepository;
 use CainiaoPickupBundle\Service\CainiaoHttpClient;
@@ -53,7 +54,7 @@ class SyncLogisticsDetailCommand extends Command
                 // 同步指定订单
                 $order = $this->pickupOrderRepository->findByOrderCode($orderCode);
                 if ($order === null) {
-                    throw new \RuntimeException(sprintf('Order not found: %s', $orderCode));
+                    throw new OrderException(sprintf('Order not found: %s', $orderCode));
                 }
                 $this->syncLogistics($order, $output);
             } else {
@@ -86,7 +87,7 @@ class SyncLogisticsDetailCommand extends Command
     private function syncLogistics(PickupOrder $order, OutputInterface $output): void
     {
         if ($order->getMailNo() === null) {
-            throw new \RuntimeException(sprintf('Order %s has no mail number', $order->getOrderCode()));
+            throw new OrderException(sprintf('Order %s has no mail number', $order->getOrderCode()));
         }
 
         // 查询物流详情

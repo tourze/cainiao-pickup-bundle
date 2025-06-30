@@ -3,6 +3,7 @@
 namespace CainiaoPickupBundle\Command;
 
 use CainiaoPickupBundle\Entity\PickupOrder;
+use CainiaoPickupBundle\Exception\OrderException;
 use CainiaoPickupBundle\Repository\PickupOrderRepository;
 use CainiaoPickupBundle\Service\CainiaoHttpClient;
 use Doctrine\ORM\EntityManagerInterface;
@@ -49,7 +50,7 @@ class SyncPickupOrderCommand extends Command
                 // 同步指定订单
                 $order = $this->pickupOrderRepository->findByOrderCode($orderCode);
                 if ($order === null) {
-                    throw new \RuntimeException(sprintf('Order not found: %s', $orderCode));
+                    throw new OrderException(sprintf('Order not found: %s', $orderCode));
                 }
                 $this->syncOrder($order);
                 $output->writeln(sprintf('Successfully synced order: %s', $orderCode));

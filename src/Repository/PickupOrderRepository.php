@@ -55,7 +55,7 @@ class PickupOrderRepository extends ServiceEntityRepository
                 OrderStatusEnum::WAREHOUSE_ACCEPT->value,
                 OrderStatusEnum::WAREHOUSE_PROCESS->value,
             ])
-            ->orderBy('o.createdAt', 'DESC')
+            ->orderBy('o.createTime', 'DESC')
             ->getQuery()
             ->getResult();
     }

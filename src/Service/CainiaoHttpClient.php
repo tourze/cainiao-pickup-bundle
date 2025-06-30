@@ -5,6 +5,9 @@ namespace CainiaoPickupBundle\Service;
 use CainiaoPickupBundle\Entity\CainiaoConfig;
 use CainiaoPickupBundle\Entity\PickupOrder;
 use CainiaoPickupBundle\Enum\OrderStatusEnum;
+use CainiaoPickupBundle\Exception\CainiaoApiException;
+use CainiaoPickupBundle\Exception\InvalidResponseException;
+use CainiaoPickupBundle\Exception\OrderModificationFailedException;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -22,7 +25,7 @@ class CainiaoHttpClient
      *
      * @return array{isFull: bool, availableTimeSlots: array<array{startTime: string, endTime: string}>}
      *
-     * @throws \RuntimeException
+     * @throws InvalidResponseException
      *
      * @see https://open.cainiao.com/api-doc/detail?category=link&type=cainiao_moduan_management&apiId=GUOGUO_QUERY_SEND_SERVICE_DETAIL
      */
@@ -31,7 +34,7 @@ class CainiaoHttpClient
         $response = $this->request($order->getConfig(), 'guoguo.pickup.service.time.query', $order->toPreQueryApiFormat());
 
         if (!isset($response['data'])) {
-            throw new \RuntimeException('Invalid response data');
+            throw new InvalidResponseException('Invalid response data');
         }
 
         $data = $response['data'];
@@ -58,14 +61,14 @@ class CainiaoHttpClient
      *
      * @see https://open.cainiao.com/api-doc/detail?category=link&type=cainiao_moduan_management&apiId=GUOGUO_CREATE_SEND_ORDER
      *
-     * @throws \RuntimeException
+     * @throws InvalidResponseException
      */
     public function createPickupOrder(PickupOrder $order): void
     {
         $response = $this->request($order->getConfig(), 'GUOGUO_CREATE_SEND_ORDER', $order->toCreateOrderApiFormat());
 
         if (!isset($response['data'])) {
-            throw new \RuntimeException('Invalid response data');
+            throw new InvalidResponseException('Invalid response data');
         }
 
         $data = $response['data'];
@@ -81,7 +84,7 @@ class CainiaoHttpClient
      *
      * @see https://open.cainiao.com/api-doc/detail?category=link&type=cainiao_moduan_management&apiId=GUOGUO_QUERY_SEND_ORDER_FULL_DETAIL
      *
-     * @throws \RuntimeException
+     * @throws InvalidResponseException
      */
     public function queryOrderDetail(PickupOrder $order): array
     {
@@ -92,7 +95,7 @@ class CainiaoHttpClient
         ]);
 
         if (!isset($response['data'])) {
-            throw new \RuntimeException('Invalid response data');
+            throw new InvalidResponseException('Invalid response data');
         }
 
         return $response['data'];
@@ -101,7 +104,7 @@ class CainiaoHttpClient
     /**
      * 取消寄件订单
      *
-     * @throws \RuntimeException
+     * @throws InvalidResponseException
      *
      * @see https://open.cainiao.com/api-doc/detail?category=link&type=cainiao_moduan_management&apiId=GUOGUO_CANCEL_SEND_ORDER
      */
@@ -116,7 +119,7 @@ class CainiaoHttpClient
     /**
      * 修改取件订单
      *
-     * @throws \RuntimeException|\Exception
+     * @throws InvalidResponseException|OrderModificationFailedException
      *
      * @see https://open.cainiao.com/api-doc/detail?category=link&type=cainiao_moduan_management&apiId=GUOGUO_MODIFY_SEND_ORDER
      */
@@ -125,11 +128,11 @@ class CainiaoHttpClient
         $response = $this->request($order->getConfig(), 'GUOGUO_MODIFY_SEND_ORDER', $order->toModifyOrderApiFormat());
 
         if (!isset($response['data'])) {
-            throw new \RuntimeException('Invalid response data');
+            throw new InvalidResponseException('Invalid response data');
         }
 
         if (!$response['data']) {
-            throw new \Exception('请求菜鸟修改失败');
+            throw new OrderModificationFailedException('请求菜鸟修改失败');
         }
     }
 
@@ -138,7 +141,7 @@ class CainiaoHttpClient
      *
      * @return array{logisticsDetails: array<array{status: string, desc: string, time: string, city?: string, area?: string, address?: string, courierInfo?: array{name?: string, mobile?: string}}>}
      *
-     * @throws \RuntimeException
+     * @throws InvalidResponseException
      *
      * @see https://open.cainiao.com/api-doc/detail?category=link&type=cainiao_moduan_management&apiId=GUOGUO_QUERY_LOGISTICS_DETAIL
      */
@@ -150,7 +153,7 @@ class CainiaoHttpClient
         ]);
 
         if (!isset($response['data'])) {
-            throw new \RuntimeException('Invalid response data');
+            throw new InvalidResponseException('Invalid response data');
         }
 
         return $response['data'];
@@ -159,7 +162,7 @@ class CainiaoHttpClient
     /**
      * 发送请求到菜鸟API
      *
-     * @throws \RuntimeException 当API请求失败时
+     * @throws CainiaoApiException 当API请求失败时
      */
     private function request(CainiaoConfig $config, string $msgType, array $data): array
     {
@@ -191,7 +194,7 @@ class CainiaoHttpClient
             ]);
 
             if (Response::HTTP_OK !== $response->getStatusCode()) {
-                throw new \RuntimeException('Cainiao API request failed: ' . $response->getContent(false));
+                throw new CainiaoApiException('Cainiao API request failed: ' . $response->getContent(false));
             }
 
             $result = $response->toArray();
@@ -204,7 +207,7 @@ class CainiaoHttpClient
             ]);
 
             if (!$result['success']) {
-                throw new \RuntimeException(sprintf('Cainiao API request failed: %s (code: %s)', $result['errorMessage'] ?? 'Unknown error', $result['errorCode'] ?? 'unknown'));
+                throw new CainiaoApiException(sprintf('Cainiao API request failed: %s (code: %s)', $result['errorMessage'] ?? 'Unknown error', $result['errorCode'] ?? 'unknown'));
             }
 
             return $result;

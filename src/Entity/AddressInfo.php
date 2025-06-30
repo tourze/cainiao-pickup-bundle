@@ -4,7 +4,7 @@ namespace CainiaoPickupBundle\Entity;
 
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
-use Tourze\DoctrineSnowflakeBundle\Service\SnowflakeIdGenerator;
+use Tourze\DoctrineSnowflakeBundle\Traits\SnowflakeKeyAware;
 use Tourze\DoctrineTimestampBundle\Traits\TimestampableAware;
 use Tourze\DoctrineUserBundle\Traits\BlameableAware;
 
@@ -14,12 +14,7 @@ class AddressInfo implements \Stringable
 {
     use TimestampableAware;
     use BlameableAware;
-
-    #[ORM\Id]
-    #[ORM\GeneratedValue(strategy: 'CUSTOM')]
-    #[ORM\CustomIdGenerator(SnowflakeIdGenerator::class)]
-    #[ORM\Column(type: Types::BIGINT, nullable: false, options: ['comment' => 'ID'])]
-    private ?string $id = null;
+    use SnowflakeKeyAware;
 
     #[ORM\Column(type: Types::STRING, length: 32, options: ['comment' => '联系人姓名'])]
     private string $name;
@@ -42,10 +37,6 @@ class AddressInfo implements \Stringable
     #[ORM\Column(type: Types::STRING, length: 255, nullable: true, options: ['comment' => '详细地址'])]
     private ?string $address = null;
 
-    public function getId(): ?string
-    {
-        return $this->id;
-    }
 
     public function __toString(): string
     {

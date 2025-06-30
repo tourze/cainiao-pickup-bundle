@@ -6,6 +6,7 @@ use CainiaoPickupBundle\Entity\AddressInfo;
 use CainiaoPickupBundle\Entity\PickupOrder;
 use CainiaoPickupBundle\Enum\ItemTypeEnum;
 use CainiaoPickupBundle\Enum\OrderStatusEnum;
+use CainiaoPickupBundle\Exception\ConfigurationException;
 use CainiaoPickupBundle\Exception\OrderCancellationFailedException;
 use CainiaoPickupBundle\Exception\OrderCannotBeCancelledException;
 use CainiaoPickupBundle\Exception\OrderModificationFailedException;
@@ -33,7 +34,7 @@ class PickupService
         // 获取有效的配置
         $config = $this->cainiaoConfigRepository->findValidConfig();
         if ($config === null) {
-            throw new \RuntimeException('No valid Cainiao config found');
+            throw new ConfigurationException('No valid Cainiao config found');
         }
 
         // 创建寄件人地址信息
