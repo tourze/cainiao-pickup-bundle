@@ -1,3 +1,0 @@
-cainiao_pickup_controllers:
-  resource: '../../Controller/'
-  type: attribute

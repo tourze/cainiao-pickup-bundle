@@ -1,24 +1,28 @@
 <?php
 
+declare(strict_types=1);
+
 namespace CainiaoPickupBundle\Repository;
 
 use CainiaoPickupBundle\Entity\CainiaoConfig;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
-
+use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
+use Tourze\PHPUnitSymfonyKernelTest\Attribute\AsRepository;
 
 /**
- * @method CainiaoConfig|null find($id, $lockMode = null, $lockVersion = null)
- * @method CainiaoConfig|null findOneBy(array $criteria, array $orderBy = null)
- * @method CainiaoConfig[]    findAll()
- * @method CainiaoConfig[]    findBy(array $criteria, array $orderBy = null, $limit = null, $offset = null)
+ * @extends ServiceEntityRepository<CainiaoConfig>
  */
+#[AsRepository(entityClass: CainiaoConfig::class)]
+#[Autoconfigure(public: true)]
 class CainiaoConfigRepository extends ServiceEntityRepository
 {
-
     public function __construct(ManagerRegistry $registry)
     {
-        parent::__construct($registry, CainiaoConfig::class);
+        /** @var class-string<CainiaoConfig> */
+        $entityClass = CainiaoConfig::class;
+        /** @phpstan-ignore-next-line */
+        parent::__construct($registry, $entityClass);
     }
 
     /**
@@ -27,5 +31,23 @@ class CainiaoConfigRepository extends ServiceEntityRepository
     public function findValidConfig(): ?CainiaoConfig
     {
         return $this->findOneBy(['valid' => true]);
+    }
+
+    public function save(CainiaoConfig $entity, bool $flush = true): void
+    {
+        $this->getEntityManager()->persist($entity);
+
+        if ($flush) {
+            $this->getEntityManager()->flush();
+        }
+    }
+
+    public function remove(CainiaoConfig $entity, bool $flush = true): void
+    {
+        $this->getEntityManager()->remove($entity);
+
+        if ($flush) {
+            $this->getEntityManager()->flush();
+        }
     }
 }

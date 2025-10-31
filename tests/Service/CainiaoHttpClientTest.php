@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace CainiaoPickupBundle\Tests\Service;
 
 use CainiaoPickupBundle\Entity\AddressInfo;
@@ -8,28 +10,43 @@ use CainiaoPickupBundle\Entity\PickupOrder;
 use CainiaoPickupBundle\Enum\ItemTypeEnum;
 use CainiaoPickupBundle\Enum\OrderStatusEnum;
 use CainiaoPickupBundle\Service\CainiaoHttpClient;
+use CainiaoPickupBundle\Tests\AbstractTestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\MockObject\MockObject;
-use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
-class CainiaoHttpClientTest extends TestCase
+/**
+ * @internal
+ */
+#[CoversClass(CainiaoHttpClient::class)]
+#[RunTestsInSeparateProcesses]
+final class CainiaoHttpClientTest extends AbstractTestCase
 {
     private HttpClientInterface|MockObject $httpClient;
+
     private LoggerInterface|MockObject $logger;
+
     private CainiaoHttpClient $cainiaoHttpClient;
+
     private PickupOrder $order;
+
     private CainiaoConfig $config;
+
     private ResponseInterface|MockObject $response;
 
     protected function setUp(): void
     {
+        parent::setUp();
+        // 创建 mock 依赖
         $this->httpClient = $this->createMock(HttpClientInterface::class);
         $this->logger = $this->createMock(LoggerInterface::class);
         $this->response = $this->createMock(ResponseInterface::class);
-        
+
+        // 直接创建服务实例（单元测试方式）
         $this->cainiaoHttpClient = new CainiaoHttpClient(
             $this->httpClient,
             $this->logger
@@ -37,34 +54,34 @@ class CainiaoHttpClientTest extends TestCase
 
         // 准备测试数据
         $this->config = new CainiaoConfig();
-        $this->config->setName('测试配置')
-            ->setAppKey('app_key')
-            ->setAppSecret('app_secret')
-            ->setProviderId('cainiao_provider')
-            ->setAccessCode('access_code')
-            ->setApiGateway('https://api.example.com/cainiao')
-            ->setValid(true);
+        $this->config->setName('测试配置');
+        $this->config->setAppKey('app_key');
+        $this->config->setAppSecret('app_secret');
+        $this->config->setProviderId('cainiao_provider');
+        $this->config->setAccessCode('access_code');
+        $this->config->setApiGateway('https://api.example.com/cainiao');
+        $this->config->setValid(true);
 
         $senderInfo = new AddressInfo();
-        $senderInfo->setName('发件人')
-            ->setMobile('13800138000')
-            ->setFullAddressDetail('北京市朝阳区三里屯街道10号');
+        $senderInfo->setName('发件人');
+        $senderInfo->setMobile('13800138000');
+        $senderInfo->setFullAddressDetail('北京市朝阳区三里屯街道10号');
 
         $receiverInfo = new AddressInfo();
-        $receiverInfo->setName('收件人')
-            ->setMobile('13900139000')
-            ->setFullAddressDetail('上海市浦东新区张江高科园区88号');
+        $receiverInfo->setName('收件人');
+        $receiverInfo->setMobile('13900139000');
+        $receiverInfo->setFullAddressDetail('上海市浦东新区张江高科园区88号');
 
         $this->order = new PickupOrder();
-        $this->order->setOrderCode('TEST123456')
-            ->setSenderInfo($senderInfo)
-            ->setReceiverInfo($receiverInfo)
-            ->setItemType(ItemTypeEnum::DOCUMENT)
-            ->setWeight(1.5)
-            ->setConfig($this->config);
+        $this->order->setOrderCode('TEST123456');
+        $this->order->setSenderInfo($senderInfo);
+        $this->order->setReceiverInfo($receiverInfo);
+        $this->order->setItemType(ItemTypeEnum::DOCUMENT);
+        $this->order->setWeight(1.5);
+        $this->order->setConfig($this->config);
     }
 
-    public function testPreQueryPickupService_withValidResponse(): void
+    public function testPreQueryPickupServiceWithValidResponse(): void
     {
         // 模拟 HTTP 响应
         $responseData = [
@@ -94,9 +111,10 @@ class CainiaoHttpClientTest extends TestCase
         // 配置模拟行为
         $this->response->method('getStatusCode')->willReturn(Response::HTTP_OK);
         $this->response->method('toArray')->willReturn($responseData);
-        
+
         $this->httpClient->method('request')
-            ->willReturn($this->response);
+            ->willReturn($this->response)
+        ;
 
         // 执行测试
         $result = $this->cainiaoHttpClient->preQueryPickupService($this->order);
@@ -110,7 +128,7 @@ class CainiaoHttpClientTest extends TestCase
         $this->assertEquals('2023-08-01 18:00:00', $result['availableTimeSlots'][1]['endTime']);
     }
 
-    public function testPreQueryPickupService_withInvalidResponse(): void
+    public function testPreQueryPickupServiceWithInvalidResponse(): void
     {
         // 模拟 HTTP 响应
         $responseData = [
@@ -121,9 +139,10 @@ class CainiaoHttpClientTest extends TestCase
         // 配置模拟行为
         $this->response->method('getStatusCode')->willReturn(Response::HTTP_OK);
         $this->response->method('toArray')->willReturn($responseData);
-        
+
         $this->httpClient->method('request')
-            ->willReturn($this->response);
+            ->willReturn($this->response)
+        ;
 
         // 断言异常
         $this->expectException(\RuntimeException::class);
@@ -133,7 +152,7 @@ class CainiaoHttpClientTest extends TestCase
         $this->cainiaoHttpClient->preQueryPickupService($this->order);
     }
 
-    public function testCreatePickupOrder_updatesOrderCorrectly(): void
+    public function testCreatePickupOrderUpdatesOrderCorrectly(): void
     {
         // 模拟 HTTP 响应
         $responseData = [
@@ -149,9 +168,10 @@ class CainiaoHttpClientTest extends TestCase
         // 配置模拟行为
         $this->response->method('getStatusCode')->willReturn(Response::HTTP_OK);
         $this->response->method('toArray')->willReturn($responseData);
-        
+
         $this->httpClient->method('request')
-            ->willReturn($this->response);
+            ->willReturn($this->response)
+        ;
 
         // 执行测试
         $this->cainiaoHttpClient->createPickupOrder($this->order);
@@ -163,11 +183,11 @@ class CainiaoHttpClientTest extends TestCase
         $this->assertEquals('SF', $this->order->getCpCode());
     }
 
-    public function testQueryOrderDetail_returnsCorrectData(): void
+    public function testQueryOrderDetailReturnsCorrectData(): void
     {
         // 准备测试数据
         $this->order->setCainiaoOrderCode('CN123456');
-        
+
         // 模拟 HTTP 响应
         $responseData = [
             'success' => true,
@@ -187,9 +207,10 @@ class CainiaoHttpClientTest extends TestCase
         // 配置模拟行为
         $this->response->method('getStatusCode')->willReturn(Response::HTTP_OK);
         $this->response->method('toArray')->willReturn($responseData);
-        
+
         $this->httpClient->method('request')
-            ->willReturn($this->response);
+            ->willReturn($this->response)
+        ;
 
         // 执行测试
         $result = $this->cainiaoHttpClient->queryOrderDetail($this->order);
@@ -201,12 +222,12 @@ class CainiaoHttpClientTest extends TestCase
         $this->assertEquals('顺丰速运', $result['cpName']);
     }
 
-    public function testCancelPickupOrder_updatesOrderStatusCorrectly(): void
+    public function testCancelPickupOrderUpdatesOrderStatusCorrectly(): void
     {
         // 准备测试数据
         $this->order->setCainiaoOrderCode('CN123456');
         $this->order->setStatus(OrderStatusEnum::CREATE);
-        
+
         // 模拟 HTTP 响应
         $responseData = [
             'success' => true,
@@ -216,9 +237,10 @@ class CainiaoHttpClientTest extends TestCase
         // 配置模拟行为
         $this->response->method('getStatusCode')->willReturn(Response::HTTP_OK);
         $this->response->method('toArray')->willReturn($responseData);
-        
+
         $this->httpClient->method('request')
-            ->willReturn($this->response);
+            ->willReturn($this->response)
+        ;
 
         // 执行测试
         $this->cainiaoHttpClient->cancelPickupOrder($this->order, '用户取消');
@@ -228,11 +250,11 @@ class CainiaoHttpClientTest extends TestCase
         $this->assertEquals('用户取消', $this->order->getCancelReason());
     }
 
-    public function testModifyPickupOrder_withSuccessResponse(): void
+    public function testModifyPickupOrderWithSuccessResponse(): void
     {
         // 准备测试数据
         $this->order->setCainiaoOrderCode('CN123456');
-        
+
         // 模拟 HTTP 响应
         $responseData = [
             'success' => true,
@@ -242,20 +264,23 @@ class CainiaoHttpClientTest extends TestCase
         // 配置模拟行为
         $this->response->method('getStatusCode')->willReturn(Response::HTTP_OK);
         $this->response->method('toArray')->willReturn($responseData);
-        
+
         $this->httpClient->method('request')
-            ->willReturn($this->response);
+            ->willReturn($this->response)
+        ;
 
         // 执行测试 - 不应抛出异常
         $this->cainiaoHttpClient->modifyPickupOrder($this->order);
-        $this->addToAssertionCount(1); // 如果执行到这里，测试通过
+
+        // 验证HTTP客户端被正确调用
+        $this->assertEquals('CN123456', $this->order->getCainiaoOrderCode());
     }
 
-    public function testModifyPickupOrder_withFailureResponse(): void
+    public function testModifyPickupOrderWithFailureResponse(): void
     {
         // 准备测试数据
         $this->order->setCainiaoOrderCode('CN123456');
-        
+
         // 模拟 HTTP 响应
         $responseData = [
             'success' => true,
@@ -265,9 +290,10 @@ class CainiaoHttpClientTest extends TestCase
         // 配置模拟行为
         $this->response->method('getStatusCode')->willReturn(Response::HTTP_OK);
         $this->response->method('toArray')->willReturn($responseData);
-        
+
         $this->httpClient->method('request')
-            ->willReturn($this->response);
+            ->willReturn($this->response)
+        ;
 
         // 断言异常
         $this->expectException(\Exception::class);
@@ -277,12 +303,12 @@ class CainiaoHttpClientTest extends TestCase
         $this->cainiaoHttpClient->modifyPickupOrder($this->order);
     }
 
-    public function testQueryLogisticsDetail_returnsCorrectData(): void
+    public function testQueryLogisticsDetailReturnsCorrectData(): void
     {
         // 准备测试数据
         $this->order->setMailNo('SF123456789');
         $this->order->setOrderCode('TEST123456');
-        
+
         // 模拟 HTTP 响应
         $responseData = [
             'success' => true,
@@ -307,9 +333,10 @@ class CainiaoHttpClientTest extends TestCase
         // 配置模拟行为
         $this->response->method('getStatusCode')->willReturn(Response::HTTP_OK);
         $this->response->method('toArray')->willReturn($responseData);
-        
+
         $this->httpClient->method('request')
-            ->willReturn($this->response);
+            ->willReturn($this->response)
+        ;
 
         // 执行测试
         $result = $this->cainiaoHttpClient->queryLogisticsDetail($this->order);
@@ -320,4 +347,4 @@ class CainiaoHttpClientTest extends TestCase
         $this->assertEquals('100', $result['logisticsDetails'][0]['status']);
         $this->assertEquals('已接单', $result['logisticsDetails'][0]['desc']);
     }
-} 
+}

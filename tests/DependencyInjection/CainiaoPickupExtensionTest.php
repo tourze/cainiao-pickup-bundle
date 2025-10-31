@@ -1,20 +1,30 @@
 <?php
 
+declare(strict_types=1);
+
 namespace CainiaoPickupBundle\Tests\DependencyInjection;
 
 use CainiaoPickupBundle\DependencyInjection\CainiaoPickupExtension;
-use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Tourze\PHPUnitSymfonyUnitTest\AbstractDependencyInjectionExtensionTestCase;
 
-class CainiaoPickupExtensionTest extends TestCase
+/**
+ * @internal
+ */
+#[CoversClass(CainiaoPickupExtension::class)]
+final class CainiaoPickupExtensionTest extends AbstractDependencyInjectionExtensionTestCase
 {
     private CainiaoPickupExtension $extension;
+
     private ContainerBuilder $container;
 
     protected function setUp(): void
     {
+        parent::setUp();
         $this->extension = new CainiaoPickupExtension();
         $this->container = new ContainerBuilder();
+        $this->container->setParameter('kernel.environment', 'test');
     }
 
     public function testLoadServices(): void
@@ -26,7 +36,7 @@ class CainiaoPickupExtensionTest extends TestCase
         $hasCommandDefinition = false;
         $hasServiceDefinition = false;
         $hasRepositoryDefinition = false;
-        
+
         foreach ($definitions as $id => $definition) {
             if (str_starts_with($id, 'CainiaoPickupBundle\Command\\')) {
                 $hasCommandDefinition = true;
@@ -38,7 +48,7 @@ class CainiaoPickupExtensionTest extends TestCase
                 $hasRepositoryDefinition = true;
             }
         }
-        
+
         $this->assertTrue($hasCommandDefinition, 'Commands should be loaded');
         $this->assertTrue($hasServiceDefinition, 'Services should be loaded');
         $this->assertTrue($hasRepositoryDefinition, 'Repositories should be loaded');
@@ -47,7 +57,7 @@ class CainiaoPickupExtensionTest extends TestCase
     public function testLoadWithEmptyConfig(): void
     {
         $this->extension->load([], $this->container);
-        
+
         // 确保即使配置为空也能正常加载
         $this->assertNotEmpty($this->container->getDefinitions());
     }
@@ -55,12 +65,12 @@ class CainiaoPickupExtensionTest extends TestCase
     public function testServicesAreAutoconfigured(): void
     {
         $this->extension->load([], $this->container);
-        
+
         // 由于使用目录加载方式，自动配置应该生效
         // 检查是否有服务定义被加载
         $definitions = $this->container->getDefinitions();
         $hasAutoConfiguredServices = false;
-        
+
         foreach ($definitions as $id => $definition) {
             if (str_starts_with($id, 'CainiaoPickupBundle\\')) {
                 // 检查是否启用了自动配置
@@ -70,25 +80,25 @@ class CainiaoPickupExtensionTest extends TestCase
                 }
             }
         }
-        
+
         $this->assertTrue($hasAutoConfiguredServices, 'Services should be autoconfigured');
     }
 
     public function testRepositoriesAreAutoconfigured(): void
     {
         $this->extension->load([], $this->container);
-        
+
         // 验证仓储服务是否被加载
         $definitions = $this->container->getDefinitions();
         $hasRepositoryServices = false;
-        
+
         foreach ($definitions as $id => $definition) {
             if (str_starts_with($id, 'CainiaoPickupBundle\Repository\\')) {
                 $hasRepositoryServices = true;
                 break;
             }
         }
-        
+
         $this->assertTrue($hasRepositoryServices, 'Repository services should be loaded');
     }
 }

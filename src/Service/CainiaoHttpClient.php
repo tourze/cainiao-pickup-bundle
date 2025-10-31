@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace CainiaoPickupBundle\Service;
 
 use CainiaoPickupBundle\Entity\CainiaoConfig;
@@ -8,15 +10,17 @@ use CainiaoPickupBundle\Enum\OrderStatusEnum;
 use CainiaoPickupBundle\Exception\CainiaoApiException;
 use CainiaoPickupBundle\Exception\InvalidResponseException;
 use CainiaoPickupBundle\Exception\OrderModificationFailedException;
+use Monolog\Attribute\WithMonologChannel;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
-class CainiaoHttpClient
+#[WithMonologChannel(channel: 'cainiao_pickup')]
+readonly class CainiaoHttpClient
 {
     public function __construct(
-        private readonly HttpClientInterface $httpClient,
-        private readonly LoggerInterface $logger,
+        private HttpClientInterface $httpClient,
+        private LoggerInterface $logger,
     ) {
     }
 
@@ -31,27 +35,51 @@ class CainiaoHttpClient
      */
     public function preQueryPickupService(PickupOrder $order): array
     {
-        $response = $this->request($order->getConfig(), 'guoguo.pickup.service.time.query', $order->toPreQueryApiFormat());
+        $startTime = microtime(true);
+        $this->logger->info('Starting pickup service pre-query', ['order_id' => $order->getId()]);
+
+        try {
+            $response = $this->request($order->getConfig(), 'guoguo.pickup.service.time.query', $order->toPreQueryApiFormat());
+
+            $this->logger->info('Pickup service pre-query completed', [
+                'order_id' => $order->getId(),
+                'duration' => microtime(true) - $startTime,
+            ]);
+        } catch (\Throwable $e) {
+            $this->logger->error('Pickup service pre-query failed', [
+                'order_id' => $order->getId(),
+                'duration' => microtime(true) - $startTime,
+                'error' => $e->getMessage(),
+            ]);
+            throw $e;
+        }
 
         if (!isset($response['data'])) {
             throw new InvalidResponseException('Invalid response data');
         }
 
         $data = $response['data'];
+        assert(is_array($data));
 
         // 提取可用的时间段
         $availableTimeSlots = [];
-        foreach ($data['timeList'] ?? [] as $timeSlot) {
-            if (true === $timeSlot['selectable']) {
+        $timeList = $data['timeList'] ?? [];
+        assert(is_array($timeList));
+
+        foreach ($timeList as $timeSlot) {
+            assert(is_array($timeSlot));
+            if (true === ($timeSlot['selectable'] ?? false)) {
+                $startTime = $timeSlot['startTime'] ?? '';
+                $endTime = $timeSlot['endTime'] ?? '';
                 $availableTimeSlots[] = [
-                    'startTime' => $timeSlot['startTime'],
-                    'endTime' => $timeSlot['endTime'],
+                    'startTime' => (string) $startTime,
+                    'endTime' => (string) $endTime,
                 ];
             }
         }
 
         return [
-            'isFull' => $data['full'] ?? false,
+            'isFull' => (bool) ($data['full'] ?? false),
             'availableTimeSlots' => $availableTimeSlots,
         ];
     }
@@ -65,18 +93,47 @@ class CainiaoHttpClient
      */
     public function createPickupOrder(PickupOrder $order): void
     {
-        $response = $this->request($order->getConfig(), 'GUOGUO_CREATE_SEND_ORDER', $order->toCreateOrderApiFormat());
+        $startTime = microtime(true);
+        $this->logger->info('Starting pickup order creation', ['order_id' => $order->getId()]);
+
+        try {
+            $response = $this->request($order->getConfig(), 'GUOGUO_CREATE_SEND_ORDER', $order->toCreateOrderApiFormat());
+
+            $this->logger->info('Pickup order creation completed', [
+                'order_id' => $order->getId(),
+                'duration' => microtime(true) - $startTime,
+            ]);
+        } catch (\Throwable $e) {
+            $this->logger->error('Pickup order creation failed', [
+                'order_id' => $order->getId(),
+                'duration' => microtime(true) - $startTime,
+                'error' => $e->getMessage(),
+            ]);
+            throw $e;
+        }
 
         if (!isset($response['data'])) {
             throw new InvalidResponseException('Invalid response data');
         }
 
         $data = $response['data'];
+        if (!is_array($data)) {
+            throw new InvalidResponseException('Response data is not an array');
+        }
 
-        $order->setCainiaoOrderCode($data['orderId'] ?? null)
-            ->setMailNo($data['mailNo'] ?? null)
-            ->setOrderCode($data['gotCode'])
-            ->setCpCode($data['cpCode'] ?? null);
+        $orderId = isset($data['orderId']) && is_string($data['orderId']) ? $data['orderId'] : null;
+        $mailNo = isset($data['mailNo']) && is_string($data['mailNo']) ? $data['mailNo'] : null;
+        $gotCode = $data['gotCode'] ?? '';
+        $cpCode = isset($data['cpCode']) && is_string($data['cpCode']) ? $data['cpCode'] : null;
+
+        if (!is_string($gotCode)) {
+            throw new InvalidResponseException('gotCode must be a string');
+        }
+
+        $order->setCainiaoOrderCode($orderId);
+        $order->setMailNo($mailNo);
+        $order->setOrderCode($gotCode);
+        $order->setCpCode($cpCode);
     }
 
     /**
@@ -84,21 +141,45 @@ class CainiaoHttpClient
      *
      * @see https://open.cainiao.com/api-doc/detail?category=link&type=cainiao_moduan_management&apiId=GUOGUO_QUERY_SEND_ORDER_FULL_DETAIL
      *
+     * @return array<string, mixed>
      * @throws InvalidResponseException
      */
     public function queryOrderDetail(PickupOrder $order): array
     {
-        $response = $this->request($order->getConfig(), 'GUOGUO_QUERY_SEND_ORDER_FULL_DETAIL', [
-            'orderId' => $order->getCainiaoOrderCode(),
-            'cnAccountId' => $order->getConfig()->getAppKey(),
-            'needLogisticsDetail' => true,
-        ]);
+        $startTime = microtime(true);
+        $this->logger->info('Starting order detail query', ['order_id' => $order->getId()]);
+
+        try {
+            $response = $this->request($order->getConfig(), 'GUOGUO_QUERY_SEND_ORDER_FULL_DETAIL', [
+                'orderId' => $order->getCainiaoOrderCode(),
+                'cnAccountId' => $order->getConfig()->getAppKey(),
+                'needLogisticsDetail' => true,
+            ]);
+
+            $this->logger->info('Order detail query completed', [
+                'order_id' => $order->getId(),
+                'duration' => microtime(true) - $startTime,
+            ]);
+        } catch (\Throwable $e) {
+            $this->logger->error('Order detail query failed', [
+                'order_id' => $order->getId(),
+                'duration' => microtime(true) - $startTime,
+                'error' => $e->getMessage(),
+            ]);
+            throw $e;
+        }
 
         if (!isset($response['data'])) {
             throw new InvalidResponseException('Invalid response data');
         }
 
-        return $response['data'];
+        $data = $response['data'];
+        if (!is_array($data)) {
+            throw new InvalidResponseException('Response data is not an array');
+        }
+
+        /** @var array<string, mixed> */
+        return $data;
     }
 
     /**
@@ -110,8 +191,25 @@ class CainiaoHttpClient
      */
     public function cancelPickupOrder(PickupOrder $order, string $reason): void
     {
-        $order->setCancelReason($reason);
-        $this->request($order->getConfig(), 'GUOGUO_CANCEL_SEND_ORDER', $order->toCancelOrderApiFormat());
+        $startTime = microtime(true);
+        $this->logger->info('Starting pickup order cancellation', ['order_id' => $order->getId(), 'reason' => $reason]);
+
+        try {
+            $order->setCancelReason($reason);
+            $this->request($order->getConfig(), 'GUOGUO_CANCEL_SEND_ORDER', $order->toCancelOrderApiFormat());
+
+            $this->logger->info('Pickup order cancellation completed', [
+                'order_id' => $order->getId(),
+                'duration' => microtime(true) - $startTime,
+            ]);
+        } catch (\Throwable $e) {
+            $this->logger->error('Pickup order cancellation failed', [
+                'order_id' => $order->getId(),
+                'duration' => microtime(true) - $startTime,
+                'error' => $e->getMessage(),
+            ]);
+            throw $e;
+        }
 
         $order->setStatus(OrderStatusEnum::CANCELLED);
     }
@@ -125,13 +223,31 @@ class CainiaoHttpClient
      */
     public function modifyPickupOrder(PickupOrder $order): void
     {
-        $response = $this->request($order->getConfig(), 'GUOGUO_MODIFY_SEND_ORDER', $order->toModifyOrderApiFormat());
+        $startTime = microtime(true);
+        $this->logger->info('Starting pickup order modification', ['order_id' => $order->getId()]);
+
+        try {
+            $response = $this->request($order->getConfig(), 'GUOGUO_MODIFY_SEND_ORDER', $order->toModifyOrderApiFormat());
+
+            $this->logger->info('Pickup order modification completed', [
+                'order_id' => $order->getId(),
+                'duration' => microtime(true) - $startTime,
+            ]);
+        } catch (\Throwable $e) {
+            $this->logger->error('Pickup order modification failed', [
+                'order_id' => $order->getId(),
+                'duration' => microtime(true) - $startTime,
+                'error' => $e->getMessage(),
+            ]);
+            throw $e;
+        }
 
         if (!isset($response['data'])) {
             throw new InvalidResponseException('Invalid response data');
         }
 
-        if (!$response['data']) {
+        $data = $response['data'];
+        if (false === $data) {
             throw new OrderModificationFailedException('请求菜鸟修改失败');
         }
     }
@@ -147,22 +263,54 @@ class CainiaoHttpClient
      */
     public function queryLogisticsDetail(PickupOrder $order): array
     {
-        $response = $this->request($order->getConfig(), 'guoguo.pickup.query.logistics.detail', [
-            'mailNo' => $order->getMailNo(),
-            'orderCode' => $order->getOrderCode(),
-        ]);
+        $startTime = microtime(true);
+        $this->logger->info('Starting logistics detail query', ['order_id' => $order->getId()]);
+
+        try {
+            $response = $this->request($order->getConfig(), 'guoguo.pickup.query.logistics.detail', [
+                'mailNo' => $order->getMailNo(),
+                'orderCode' => $order->getOrderCode(),
+            ]);
+
+            $this->logger->info('Logistics detail query completed', [
+                'order_id' => $order->getId(),
+                'duration' => microtime(true) - $startTime,
+            ]);
+        } catch (\Throwable $e) {
+            $this->logger->error('Logistics detail query failed', [
+                'order_id' => $order->getId(),
+                'duration' => microtime(true) - $startTime,
+                'error' => $e->getMessage(),
+            ]);
+            throw $e;
+        }
 
         if (!isset($response['data'])) {
             throw new InvalidResponseException('Invalid response data');
         }
 
-        return $response['data'];
+        $data = $response['data'];
+        if (!is_array($data)) {
+            throw new InvalidResponseException('Response data is not an array');
+        }
+
+        // 确保返回符合预期的数据结构
+        if (!isset($data['logisticsDetails']) || !is_array($data['logisticsDetails'])) {
+            throw new InvalidResponseException('Missing or invalid logisticsDetails in response');
+        }
+
+        /** @var array{logisticsDetails: array<array{status: string, desc: string, time: string, city?: string, area?: string, address?: string, courierInfo?: array{name?: string, mobile?: string}}>} */
+        return $data;
     }
 
     /**
      * 发送请求到菜鸟API
      *
      * @throws CainiaoApiException 当API请求失败时
+     */
+    /**
+     * @param array<string, mixed> $data
+     * @return array<string, mixed>
      */
     private function request(CainiaoConfig $config, string $msgType, array $data): array
     {
@@ -183,7 +331,17 @@ class CainiaoHttpClient
         ];
 
         // 添加签名
-        $requestData['data_digest'] = $this->generateSign($config, $requestData['logistics_interface']);
+        $logisticsInterface = $requestData['logistics_interface'];
+        if (!is_string($logisticsInterface)) {
+            throw new CainiaoApiException('Failed to encode logistics interface data');
+        }
+        $requestData['data_digest'] = $this->generateSign($config, $logisticsInterface);
+
+        $httpStartTime = microtime(true);
+        $this->logger->info('Making HTTP request to Cainiao API', [
+            'url' => $url,
+            'msg_type' => $msgType,
+        ]);
 
         try {
             $response = $this->httpClient->request('POST', $url, [
@@ -200,16 +358,20 @@ class CainiaoHttpClient
             $result = $response->toArray();
 
             // 记录请求日志
-            $this->logger->info('Cainiao API request', [
+            $this->logger->info('Cainiao API request completed successfully', [
                 'url' => $url,
-                'request' => $requestData,
-                'response' => $result,
+                'msg_type' => $msgType,
+                'duration' => microtime(true) - $httpStartTime,
+                'response_success' => $result['success'] ?? false,
             ]);
 
             if (!$result['success']) {
-                throw new CainiaoApiException(sprintf('Cainiao API request failed: %s (code: %s)', $result['errorMessage'] ?? 'Unknown error', $result['errorCode'] ?? 'unknown'));
+                $errorMessage = $result['errorMessage'] ?? 'Unknown error';
+                $errorCode = $result['errorCode'] ?? 'unknown';
+                throw new CainiaoApiException(sprintf('Cainiao API request failed: %s (code: %s)', (string) $errorMessage, (string) $errorCode));
             }
 
+            /** @var array<string, mixed> $result */
             return $result;
         } catch (\Throwable $e) {
             $this->logger->error('Cainiao API request failed', [
@@ -239,5 +401,4 @@ class CainiaoHttpClient
         // MD5加密并转换成base64编码
         return base64_encode(md5($stringToSign, true));
     }
-
 }

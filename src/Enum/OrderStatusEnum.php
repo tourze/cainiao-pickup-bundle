@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace CainiaoPickupBundle\Enum;
 
 use Tourze\EnumExtra\Itemable;
@@ -12,7 +14,7 @@ enum OrderStatusEnum: string implements Labelable, Itemable, Selectable
 {
     use ItemTrait;
     use SelectTrait;
-    
+
     case CANCELLED = 'cancelled';       // 已取消
 
     // 订单段状态
@@ -49,13 +51,13 @@ enum OrderStatusEnum: string implements Labelable, Itemable, Selectable
     case SIGN = '1000';                    // 已签收
     case ORDER_TRANSER = '1100';           // 已转单
     case REVERSE_RETURN = '1200';          // 退货返回
-    
+
     /**
      * 获取订单状态对应的中文描述
      */
     public function getLabel(): string
     {
-        return match($this) {
+        return match ($this) {
             self::CANCELLED => '已取消',
             self::CREATE => '已下单',
             self::WAREHOUSE_ACCEPT => '仓库已接单',

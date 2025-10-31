@@ -1,9 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace CainiaoPickupBundle\Entity;
 
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Validator\Constraints as Assert;
 use Tourze\DoctrineSnowflakeBundle\Traits\SnowflakeKeyAware;
 use Tourze\DoctrineTimestampBundle\Traits\TimestampableAware;
 use Tourze\DoctrineUserBundle\Traits\BlameableAware;
@@ -17,26 +20,36 @@ class AddressInfo implements \Stringable
     use SnowflakeKeyAware;
 
     #[ORM\Column(type: Types::STRING, length: 32, options: ['comment' => '联系人姓名'])]
+    #[Assert\NotBlank(message: '联系人姓名不能为空')]
+    #[Assert\Length(max: 32, maxMessage: '联系人姓名长度不能超过 {{ limit }} 个字符')]
     private string $name;
 
     #[ORM\Column(type: Types::STRING, length: 20, options: ['comment' => '联系人电话'])]
+    #[Assert\NotBlank(message: '联系人电话不能为空')]
+    #[Assert\Length(max: 20, maxMessage: '联系人电话长度不能超过 {{ limit }} 个字符')]
+    #[Assert\Regex(pattern: '/^1[3-9]\d{9}$/', message: '请输入有效的手机号码')]
     private string $mobile;
 
     #[ORM\Column(type: Types::STRING, length: 255, options: ['comment' => '完整地址'])]
+    #[Assert\NotBlank(message: '完整地址不能为空')]
+    #[Assert\Length(max: 255, maxMessage: '完整地址长度不能超过 {{ limit }} 个字符')]
     private string $fullAddressDetail;
 
     #[ORM\Column(type: Types::STRING, length: 255, nullable: true, options: ['comment' => '省份名称'])]
+    #[Assert\Length(max: 255, maxMessage: '省份名称长度不能超过 {{ limit }} 个字符')]
     private ?string $provinceName = null;
 
     #[ORM\Column(type: Types::STRING, length: 255, nullable: true, options: ['comment' => '城市名称'])]
+    #[Assert\Length(max: 255, maxMessage: '城市名称长度不能超过 {{ limit }} 个字符')]
     private ?string $cityName = null;
 
     #[ORM\Column(type: Types::STRING, length: 255, nullable: true, options: ['comment' => '区域名称'])]
+    #[Assert\Length(max: 255, maxMessage: '区域名称长度不能超过 {{ limit }} 个字符')]
     private ?string $areaName = null;
 
     #[ORM\Column(type: Types::STRING, length: 255, nullable: true, options: ['comment' => '详细地址'])]
+    #[Assert\Length(max: 255, maxMessage: '详细地址长度不能超过 {{ limit }} 个字符')]
     private ?string $address = null;
-
 
     public function __toString(): string
     {
@@ -48,11 +61,9 @@ class AddressInfo implements \Stringable
         return $this->name;
     }
 
-    public function setName(string $name): self
+    public function setName(string $name): void
     {
         $this->name = $name;
-
-        return $this;
     }
 
     public function getMobile(): string
@@ -60,11 +71,9 @@ class AddressInfo implements \Stringable
         return $this->mobile;
     }
 
-    public function setMobile(string $mobile): self
+    public function setMobile(string $mobile): void
     {
         $this->mobile = $mobile;
-
-        return $this;
     }
 
     public function getFullAddressDetail(): string
@@ -72,15 +81,15 @@ class AddressInfo implements \Stringable
         return $this->fullAddressDetail;
     }
 
-    public function setFullAddressDetail(string $fullAddressDetail): self
+    public function setFullAddressDetail(string $fullAddressDetail): void
     {
         $this->fullAddressDetail = $fullAddressDetail;
-
-        return $this;
     }
 
     /**
      * 转换为API请求格式
+     *
+     * @return array<string, string|null>
      */
     public function toApiFormat(): array
     {
@@ -100,11 +109,9 @@ class AddressInfo implements \Stringable
         return $this->provinceName;
     }
 
-    public function setProvinceName(?string $provinceName): static
+    public function setProvinceName(?string $provinceName): void
     {
         $this->provinceName = $provinceName;
-
-        return $this;
     }
 
     public function getCityName(): ?string
@@ -112,11 +119,9 @@ class AddressInfo implements \Stringable
         return $this->cityName;
     }
 
-    public function setCityName(?string $cityName): static
+    public function setCityName(?string $cityName): void
     {
         $this->cityName = $cityName;
-
-        return $this;
     }
 
     public function getAreaName(): ?string
@@ -124,11 +129,9 @@ class AddressInfo implements \Stringable
         return $this->areaName;
     }
 
-    public function setAreaName(?string $areaName): static
+    public function setAreaName(?string $areaName): void
     {
         $this->areaName = $areaName;
-
-        return $this;
     }
 
     public function getAddress(): ?string
@@ -136,10 +139,8 @@ class AddressInfo implements \Stringable
         return $this->address;
     }
 
-    public function setAddress(?string $address): static
+    public function setAddress(?string $address): void
     {
         $this->address = $address;
-
-        return $this;
     }
 }

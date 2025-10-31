@@ -1,8 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace CainiaoPickupBundle\Service;
 
 use CainiaoPickupBundle\Entity\AddressInfo;
+use CainiaoPickupBundle\Entity\CainiaoConfig;
 use CainiaoPickupBundle\Entity\PickupOrder;
 use CainiaoPickupBundle\Enum\ItemTypeEnum;
 use CainiaoPickupBundle\Enum\OrderStatusEnum;
@@ -13,113 +16,202 @@ use CainiaoPickupBundle\Exception\OrderModificationFailedException;
 use CainiaoPickupBundle\Repository\CainiaoConfigRepository;
 use CainiaoPickupBundle\Repository\PickupOrderRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use Monolog\Attribute\WithMonologChannel;
 use Psr\Log\LoggerInterface;
 
-class PickupService
+#[WithMonologChannel(channel: 'cainiao_pickup')]
+readonly class PickupService
 {
+    /**
+     * @param PickupOrderRepository $pickupOrderRepository
+     * @param CainiaoConfigRepository $cainiaoConfigRepository
+     */
     public function __construct(
-        private readonly EntityManagerInterface $entityManager,
-        private readonly PickupOrderRepository $pickupOrderRepository,
-        private readonly LoggerInterface $logger,
-        private readonly CainiaoHttpClient $cainiaoHttpClient,
-        private readonly CainiaoConfigRepository $cainiaoConfigRepository,
+        private EntityManagerInterface $entityManager,
+        private PickupOrderRepository $pickupOrderRepository,
+        private LoggerInterface $logger,
+        private CainiaoHttpClient $cainiaoHttpClient,
+        private CainiaoConfigRepository $cainiaoConfigRepository,
     ) {
     }
 
     /**
      * 创建取件订单
+     * @param array<string, mixed> $data
      */
     public function createPickupOrder(array $data): PickupOrder
     {
-        // 获取有效的配置
+        $config = $this->getValidConfig();
+        $senderInfo = $this->createAddressInfo($data, 'sender');
+        $receiverInfo = $this->createAddressInfo($data, 'receiver');
+
+        $order = $this->buildPickupOrder($data, $config, $senderInfo, $receiverInfo);
+        $this->entityManager->persist($order);
+        $this->entityManager->flush();
+
+        $this->cainiaoHttpClient->createPickupOrder($order);
+        $this->entityManager->flush();
+
+        $this->logOrderCreated($order);
+
+        return $order;
+    }
+
+    private function getValidConfig(): CainiaoConfig
+    {
         $config = $this->cainiaoConfigRepository->findValidConfig();
-        if ($config === null) {
+        if (null === $config) {
             throw new ConfigurationException('No valid Cainiao config found');
         }
 
-        // 创建寄件人地址信息
-        $senderInfo = new AddressInfo();
-        $senderInfo->setName($data['senderName'])
-            ->setMobile($data['senderPhone'])
-            ->setFullAddressDetail($data['senderFullAddress']);
-        if (isset($data['senderCity'])) {
-            $senderInfo->setCityName($data['senderCity']);
-        }
-        if (isset($data['senderProvince'])) {
-            $senderInfo->setProvinceName($data['senderProvince']);
-        }
-        if (isset($data['senderArea'])) {
-            $senderInfo->setAreaName($data['senderArea']);
-        }
-        if (isset($data['senderAddress'])) {
-            $senderInfo->setAddress($data['senderAddress']);
+        return $config;
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private function createAddressInfo(array $data, string $type): AddressInfo
+    {
+        $addressInfo = new AddressInfo();
+        $prefix = 'sender' === $type ? 'sender' : 'receiver';
+        $fullAddress = 'sender' === $type ? 'senderFullAddress' : 'receiverFullAddress';
+
+        $name = $data[$prefix . 'Name'] ?? '';
+        $phone = $data[$prefix . 'Phone'] ?? '';
+        $fullAddressDetail = $data[$fullAddress] ?? '';
+
+        if (!is_string($name) || !is_string($phone) || !is_string($fullAddressDetail)) {
+            throw new \InvalidArgumentException('Address fields must be strings');
         }
 
-        // 创建收件人地址信息
-        $receiverInfo = new AddressInfo();
-        $receiverInfo->setName($data['receiverName'])
-            ->setMobile($data['receiverPhone'])
-            ->setFullAddressDetail($data['receiverFullAddress']);
-        if (isset($data['receiverCity'])) {
-            $receiverInfo->setCityName($data['receiverCity']);
-        }
-        if (isset($data['receiverProvince'])) {
-            $receiverInfo->setProvinceName($data['receiverProvince']);
-        }
-        if (isset($data['receiverArea'])) {
-            $receiverInfo->setAreaName($data['receiverArea']);
-        }
-        if (isset($data['receiverAddress'])) {
-            $receiverInfo->setAddress($data['receiverAddress']);
+        $addressInfo->setName($name);
+        $addressInfo->setMobile($phone);
+        $addressInfo->setFullAddressDetail($fullAddressDetail);
+
+        $this->setOptionalAddressFields($addressInfo, $data, $prefix);
+
+        return $addressInfo;
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private function setOptionalAddressFields(AddressInfo $addressInfo, array $data, string $prefix): void
+    {
+        $this->setAddressField($addressInfo, $data, $prefix . 'City', 'setCityName');
+        $this->setAddressField($addressInfo, $data, $prefix . 'Province', 'setProvinceName');
+        $this->setAddressField($addressInfo, $data, $prefix . 'Area', 'setAreaName');
+        $this->setAddressField($addressInfo, $data, $prefix . 'Address', 'setAddress');
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private function setAddressField(AddressInfo $addressInfo, array $data, string $key, string $setter): void
+    {
+        if (!isset($data[$key]) || !is_string($data[$key])) {
+            return;
         }
 
-        // 创建订单
+        match ($setter) {
+            'setCityName' => $addressInfo->setCityName($data[$key]),
+            'setProvinceName' => $addressInfo->setProvinceName($data[$key]),
+            'setAreaName' => $addressInfo->setAreaName($data[$key]),
+            'setAddress' => $addressInfo->setAddress($data[$key]),
+            default => throw new \InvalidArgumentException("Unknown setter: {$setter}"),
+        };
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private function buildPickupOrder(array $data, CainiaoConfig $config, AddressInfo $senderInfo, AddressInfo $receiverInfo): PickupOrder
+    {
         $order = new PickupOrder();
-        $order->setOrderCode($this->generateOrderCode())
-            ->setSenderInfo($senderInfo)
-            ->setReceiverInfo($receiverInfo)
-            ->setItemType(ItemTypeEnum::from($data['itemType']))
-            ->setWeight($data['weight'])
-            ->setRemark($data['remark'] ?? null)
-            ->setConfig($config);
+        $order->setOrderCode($this->generateOrderCode());
+        $order->setSenderInfo($senderInfo);
+        $order->setReceiverInfo($receiverInfo);
+        $order->setItemType(ItemTypeEnum::from(is_int($data['itemType'] ?? 1) || is_string($data['itemType'] ?? 1) ? $data['itemType'] ?? 1 : 1));
+        $order->setWeight(is_numeric($data['weight']) ? (float) $data['weight'] : 0.0);
+        $order->setRemark(isset($data['remark']) && is_string($data['remark']) ? $data['remark'] : null);
+        $order->setConfig($config);
 
-        // 设置预约时间
-        if (!empty($data['expectPickupTimeStart']) && !empty($data['expectPickupTimeEnd'])) {
-            $order->setExpectPickupTimeStart($data['expectPickupTimeStart'])
-                ->setExpectPickupTimeEnd($data['expectPickupTimeEnd']);
+        $this->setOrderOptionalFields($order, $data);
+
+        return $order;
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private function setOrderOptionalFields(PickupOrder $order, array $data): void
+    {
+        $this->setPickupTimeFields($order, $data);
+        $this->setOrderStringField($order, $data, 'itemQuantity', 'setItemQuantity');
+        $this->setOrderNumericField($order, $data, 'itemValue', 'setItemValue');
+        $this->setOrderStringField($order, $data, 'externalUserId', 'setExternalUserId');
+        $this->setOrderStringField($order, $data, 'externalUserMobile', 'setExternalUserMobile');
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private function setPickupTimeFields(PickupOrder $order, array $data): void
+    {
+        if (isset($data['expectPickupTimeStart'], $data['expectPickupTimeEnd']) && '' !== $data['expectPickupTimeStart'] && '' !== $data['expectPickupTimeEnd']) {
+            $expectStart = $data['expectPickupTimeStart'];
+            $expectEnd = $data['expectPickupTimeEnd'];
+            if (is_string($expectStart) && is_string($expectEnd)) {
+                $order->setExpectPickupTimeStart($expectStart);
+                $order->setExpectPickupTimeEnd($expectEnd);
+            }
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private function setOrderStringField(PickupOrder $order, array $data, string $key, string $setter): void
+    {
+        if (!(isset($data[$key]) && '' !== $data[$key] && is_string($data[$key]))) {
+            return;
         }
 
-        // 设置物品信息
-        if (!empty($data['itemQuantity'])) {
-            $order->setItemQuantity($data['itemQuantity']);
-        }
-        if (!empty($data['itemValue'])) {
-            $order->setItemValue($data['itemValue']);
+        match ($setter) {
+            'setItemQuantity' => $order->setItemQuantity($data[$key]),
+            'setExternalUserId' => $order->setExternalUserId($data[$key]),
+            'setExternalUserMobile' => $order->setExternalUserMobile($data[$key]),
+            default => throw new \InvalidArgumentException("Unknown setter: {$setter}"),
+        };
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private function setOrderNumericField(PickupOrder $order, array $data, string $key, string $setter): void
+    {
+        if (!isset($data[$key])) {
+            return;
         }
 
-        // 如果提供了外部用户ID，则设置
-        if (!empty($data['externalUserId'])) {
-            $order->setExternalUserId($data['externalUserId']);
+        $value = $data[$key];
+        if ('' === $value || !is_numeric($value)) {
+            return;
         }
-        if (!empty($data['externalUserMobile'])) {
-            $order->setExternalUserMobile($data['externalUserMobile']);
-        }
-        $this->entityManager->persist($order);
-        $this->entityManager->flush();
 
-        // 调用菜鸟API创建订单
-        $this->cainiaoHttpClient->createPickupOrder($order);
+        match ($setter) {
+            'setItemValue' => $order->setItemValue((float) $value),
+            default => throw new \InvalidArgumentException("Unknown setter: {$setter}"),
+        };
+    }
 
-        $this->entityManager->persist($order);
-        $this->entityManager->flush();
-
+    private function logOrderCreated(PickupOrder $order): void
+    {
         $this->logger->info('Created pickup order', [
             'orderCode' => $order->getOrderCode(),
             'cainiaoOrderCode' => $order->getCainiaoOrderCode(),
             'mailNo' => $order->getMailNo(),
         ]);
-
-        return $order;
     }
 
     /**
@@ -148,6 +240,7 @@ class PickupService
 
     /**
      * 获取指定状态的订单列表
+     * @return PickupOrder[]
      */
     public function getOrdersByStatus(OrderStatusEnum $status): array
     {
@@ -162,15 +255,15 @@ class PickupService
      */
     public function cancelPickupOrder(PickupOrder $order, string $reason): PickupOrder
     {
-        if (!in_array($order->getStatus(), [OrderStatusEnum::CREATE, OrderStatusEnum::WAREHOUSE_ACCEPT])) {
+        if (!in_array($order->getStatus(), [OrderStatusEnum::CREATE, OrderStatusEnum::WAREHOUSE_ACCEPT], true)) {
             throw new OrderCannotBeCancelledException(sprintf('Order %s cannot be cancelled, current status: %s', $order->getOrderCode(), $order->getStatus()->value));
         }
 
         $this->cainiaoHttpClient->cancelPickupOrder($order, $reason);
 
-        $order->setStatus(OrderStatusEnum::CANCELLED)
-            ->setCancelReason($reason)
-            ->setCancelTime(new \DateTimeImmutable());
+        $order->setStatus(OrderStatusEnum::CANCELLED);
+        $order->setCancelReason($reason);
+        $order->setCancelTime(new \DateTimeImmutable());
 
         $this->entityManager->flush();
 
@@ -185,67 +278,168 @@ class PickupService
 
     /**
      * 修改取件订单
-     *
+     * @param array<string, mixed> $data
      * @throws OrderModificationFailedException 当订单状态不允许修改时
      */
     public function modifyPickupOrder(PickupOrder $order, array $data): PickupOrder
     {
-        if (!in_array($order->getStatus(), [OrderStatusEnum::CREATE, OrderStatusEnum::WAREHOUSE_ACCEPT])) {
-            throw new OrderModificationFailedException(sprintf('Order %s cannot be modified, current status: %s', $order->getOrderCode(), $order->getStatus()->value));
-        }
+        $this->validateOrderCanBeModified($order);
 
-        // 更新寄件人地址信息
-        if (isset($data['senderName'], $data['senderPhone'], $data['senderAddress'])) {
-            $order->getSenderInfo()
-                ->setName($data['senderName'])
-                ->setMobile($data['senderPhone'])
-                ->setFullAddressDetail($data['senderAddress']);
-        }
-
-        // 更新收件人地址信息
-        if (isset($data['receiverName'], $data['receiverPhone'], $data['receiverAddress'])) {
-            $order->getReceiverInfo()
-                ->setName($data['receiverName'])
-                ->setMobile($data['receiverPhone'])
-                ->setFullAddressDetail($data['receiverAddress']);
-        }
-
-        // 更新物品信息
-        if (isset($data['itemType'])) {
-            $order->setItemType(ItemTypeEnum::from($data['itemType']));
-        }
-        if (isset($data['weight'])) {
-            $order->setWeight($data['weight']);
-        }
-        if (isset($data['itemQuantity'])) {
-            $order->setItemQuantity($data['itemQuantity']);
-        }
-        if (isset($data['itemValue'])) {
-            $order->setItemValue($data['itemValue']);
-        }
-
-        // 更新预约时间
-        if (isset($data['expectPickupTimeStart'], $data['expectPickupTimeEnd'])) {
-            $order->setExpectPickupTimeStart($data['expectPickupTimeStart'])
-                ->setExpectPickupTimeEnd($data['expectPickupTimeEnd']);
-        }
-
-        // 更新备注
-        if (isset($data['remark'])) {
-            $order->setRemark($data['remark']);
-        }
-
-        // 调用菜鸟API修改订单
+        $this->updateOrderFromData($order, $data);
         $this->cainiaoHttpClient->modifyPickupOrder($order);
-
         $this->entityManager->flush();
 
+        $this->logOrderModified($order);
+
+        return $order;
+    }
+
+    private function validateOrderCanBeModified(PickupOrder $order): void
+    {
+        if (!in_array($order->getStatus(), [OrderStatusEnum::CREATE, OrderStatusEnum::WAREHOUSE_ACCEPT], true)) {
+            throw new OrderModificationFailedException(sprintf('Order %s cannot be modified, current status: %s', $order->getOrderCode(), $order->getStatus()->value));
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private function updateOrderFromData(PickupOrder $order, array $data): void
+    {
+        $this->updateSenderInfo($order, $data);
+        $this->updateReceiverInfo($order, $data);
+        $this->updateItemInfo($order, $data);
+        $this->updatePickupTime($order, $data);
+        $this->updateRemark($order, $data);
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private function updateSenderInfo(PickupOrder $order, array $data): void
+    {
+        if (isset($data['senderName'], $data['senderPhone'], $data['senderAddress'])) {
+            $senderName = $data['senderName'];
+            $senderPhone = $data['senderPhone'];
+            $senderAddress = $data['senderAddress'];
+
+            if (is_string($senderName) && is_string($senderPhone) && is_string($senderAddress)) {
+                $senderInfo = $order->getSenderInfo();
+                $senderInfo->setName($senderName);
+                $senderInfo->setMobile($senderPhone);
+                $senderInfo->setFullAddressDetail($senderAddress);
+            }
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private function updateReceiverInfo(PickupOrder $order, array $data): void
+    {
+        if (isset($data['receiverName'], $data['receiverPhone'], $data['receiverAddress'])) {
+            $receiverName = $data['receiverName'];
+            $receiverPhone = $data['receiverPhone'];
+            $receiverAddress = $data['receiverAddress'];
+
+            if (is_string($receiverName) && is_string($receiverPhone) && is_string($receiverAddress)) {
+                $receiverInfo = $order->getReceiverInfo();
+                $receiverInfo->setName($receiverName);
+                $receiverInfo->setMobile($receiverPhone);
+                $receiverInfo->setFullAddressDetail($receiverAddress);
+            }
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private function updateItemInfo(PickupOrder $order, array $data): void
+    {
+        $this->updateItemType($order, $data);
+        $this->updateOrderNumericField($order, $data, 'weight', 'setWeight');
+        $this->updateOrderStringField($order, $data, 'itemQuantity', 'setItemQuantity');
+        $this->updateOrderNumericField($order, $data, 'itemValue', 'setItemValue');
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private function updateItemType(PickupOrder $order, array $data): void
+    {
+        if (isset($data['itemType'])) {
+            $itemType = $data['itemType'];
+            if (is_int($itemType) || is_string($itemType)) {
+                $order->setItemType(ItemTypeEnum::from($itemType));
+            }
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private function updateOrderStringField(PickupOrder $order, array $data, string $key, string $setter): void
+    {
+        if (!(isset($data[$key]) && is_string($data[$key]))) {
+            return;
+        }
+
+        match ($setter) {
+            'setItemQuantity' => $order->setItemQuantity($data[$key]),
+            default => throw new \InvalidArgumentException("Unknown setter: {$setter}"),
+        };
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private function updateOrderNumericField(PickupOrder $order, array $data, string $key, string $setter): void
+    {
+        if (!(isset($data[$key]) && is_numeric($data[$key]))) {
+            return;
+        }
+
+        match ($setter) {
+            'setWeight' => $order->setWeight((float) $data[$key]),
+            'setItemValue' => $order->setItemValue((float) $data[$key]),
+            default => throw new \InvalidArgumentException("Unknown setter: {$setter}"),
+        };
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private function updatePickupTime(PickupOrder $order, array $data): void
+    {
+        if (isset($data['expectPickupTimeStart'], $data['expectPickupTimeEnd'])) {
+            $expectStart = $data['expectPickupTimeStart'];
+            $expectEnd = $data['expectPickupTimeEnd'];
+            if (is_string($expectStart) && is_string($expectEnd)) {
+                $order->setExpectPickupTimeStart($expectStart);
+                $order->setExpectPickupTimeEnd($expectEnd);
+            }
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private function updateRemark(PickupOrder $order, array $data): void
+    {
+        if (isset($data['remark'])) {
+            $remark = $data['remark'];
+            if (is_string($remark)) {
+                $order->setRemark($remark);
+            }
+        }
+    }
+
+    private function logOrderModified(PickupOrder $order): void
+    {
         $this->logger->info('Modified pickup order', [
             'orderCode' => $order->getOrderCode(),
             'cainiaoOrderCode' => $order->getCainiaoOrderCode(),
         ]);
-
-        return $order;
     }
 
     /**

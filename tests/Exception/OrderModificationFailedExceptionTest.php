@@ -1,11 +1,18 @@
 <?php
 
+declare(strict_types=1);
+
 namespace CainiaoPickupBundle\Tests\Exception;
 
 use CainiaoPickupBundle\Exception\OrderModificationFailedException;
-use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use Tourze\PHPUnitBase\AbstractExceptionTestCase;
 
-class OrderModificationFailedExceptionTest extends TestCase
+/**
+ * @internal
+ */
+#[CoversClass(OrderModificationFailedException::class)]
+final class OrderModificationFailedExceptionTest extends AbstractExceptionTestCase
 {
     public function testIsRuntimeException(): void
     {
@@ -17,7 +24,7 @@ class OrderModificationFailedExceptionTest extends TestCase
     {
         $message = '订单修改失败：地址无效';
         $exception = new OrderModificationFailedException($message);
-        
+
         $this->assertSame($message, $exception->getMessage());
     }
 
@@ -26,7 +33,7 @@ class OrderModificationFailedExceptionTest extends TestCase
         $message = '修改订单失败';
         $code = 400;
         $exception = new OrderModificationFailedException($message, $code);
-        
+
         $this->assertSame($message, $exception->getMessage());
         $this->assertSame($code, $exception->getCode());
     }
@@ -35,7 +42,7 @@ class OrderModificationFailedExceptionTest extends TestCase
     {
         $previous = new \Exception('API调用失败');
         $exception = new OrderModificationFailedException('订单修改失败', 0, $previous);
-        
+
         $this->assertSame($previous, $exception->getPrevious());
     }
 }

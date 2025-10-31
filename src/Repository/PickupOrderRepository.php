@@ -1,25 +1,29 @@
 <?php
 
+declare(strict_types=1);
+
 namespace CainiaoPickupBundle\Repository;
 
 use CainiaoPickupBundle\Entity\PickupOrder;
 use CainiaoPickupBundle\Enum\OrderStatusEnum;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
-
+use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
+use Tourze\PHPUnitSymfonyKernelTest\Attribute\AsRepository;
 
 /**
- * @method PickupOrder|null find($id, $lockMode = null, $lockVersion = null)
- * @method PickupOrder|null findOneBy(array $criteria, array $orderBy = null)
- * @method PickupOrder[]    findAll()
- * @method PickupOrder[]    findBy(array $criteria, array $orderBy = null, $limit = null, $offset = null)
+ * @extends ServiceEntityRepository<PickupOrder>
  */
+#[AsRepository(entityClass: PickupOrder::class)]
+#[Autoconfigure(public: true)]
 class PickupOrderRepository extends ServiceEntityRepository
 {
-
     public function __construct(ManagerRegistry $registry)
     {
-        parent::__construct($registry, PickupOrder::class);
+        /** @var class-string<PickupOrder> */
+        $entityClass = PickupOrder::class;
+        /** @phpstan-ignore-next-line */
+        parent::__construct($registry, $entityClass);
     }
 
     /**
@@ -32,10 +36,14 @@ class PickupOrderRepository extends ServiceEntityRepository
 
     /**
      * 根据状态查询订单列表
+     * @return list<PickupOrder>
      */
     public function findByStatus(OrderStatusEnum $status): array
     {
-        return $this->findBy(['status' => $status]);
+        $result = $this->findBy(['status' => $status]);
+
+        /** @phpstan-ignore-next-line */
+        return array_values($result);
     }
 
     /**
@@ -46,9 +54,12 @@ class PickupOrderRepository extends ServiceEntityRepository
      * - 已接单
      * - 取件中
      */
+    /**
+     * @return list<PickupOrder>
+     */
     public function findUnfinishedOrders(): array
     {
-        return $this->createQueryBuilder('o')
+        $result = $this->createQueryBuilder('o')
             ->where('o.status IN (:statuses)')
             ->setParameter('statuses', [
                 OrderStatusEnum::CREATE->value,
@@ -57,6 +68,32 @@ class PickupOrderRepository extends ServiceEntityRepository
             ])
             ->orderBy('o.createTime', 'DESC')
             ->getQuery()
-            ->getResult();
+            ->getResult()
+        ;
+
+        if (!is_array($result)) {
+            return [];
+        }
+
+        /** @phpstan-ignore-next-line */
+        return array_values($result);
+    }
+
+    public function save(PickupOrder $entity, bool $flush = true): void
+    {
+        $this->getEntityManager()->persist($entity);
+
+        if ($flush) {
+            $this->getEntityManager()->flush();
+        }
+    }
+
+    public function remove(PickupOrder $entity, bool $flush = true): void
+    {
+        $this->getEntityManager()->remove($entity);
+
+        if ($flush) {
+            $this->getEntityManager()->flush();
+        }
     }
 }

@@ -1,11 +1,18 @@
 <?php
 
+declare(strict_types=1);
+
 namespace CainiaoPickupBundle\Tests\Exception;
 
 use CainiaoPickupBundle\Exception\OrderCancellationFailedException;
-use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use Tourze\PHPUnitBase\AbstractExceptionTestCase;
 
-class OrderCancellationFailedExceptionTest extends TestCase
+/**
+ * @internal
+ */
+#[CoversClass(OrderCancellationFailedException::class)]
+final class OrderCancellationFailedExceptionTest extends AbstractExceptionTestCase
 {
     public function testIsRuntimeException(): void
     {
@@ -17,7 +24,7 @@ class OrderCancellationFailedExceptionTest extends TestCase
     {
         $message = '订单取消失败：订单已发货';
         $exception = new OrderCancellationFailedException($message);
-        
+
         $this->assertSame($message, $exception->getMessage());
     }
 
@@ -26,7 +33,7 @@ class OrderCancellationFailedExceptionTest extends TestCase
         $message = '订单取消失败';
         $code = 400;
         $exception = new OrderCancellationFailedException($message, $code);
-        
+
         $this->assertSame($message, $exception->getMessage());
         $this->assertSame($code, $exception->getCode());
     }
@@ -35,7 +42,7 @@ class OrderCancellationFailedExceptionTest extends TestCase
     {
         $previous = new \Exception('原始错误');
         $exception = new OrderCancellationFailedException('订单取消失败', 0, $previous);
-        
+
         $this->assertSame($previous, $exception->getPrevious());
     }
 }

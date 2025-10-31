@@ -1,16 +1,23 @@
 <?php
 
+declare(strict_types=1);
+
 namespace CainiaoPickupBundle\Tests\Enum;
 
 use CainiaoPickupBundle\Enum\OrderStatusEnum;
-use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use Tourze\PHPUnitEnum\AbstractEnumTestCase;
 
-class OrderStatusEnumTest extends TestCase
+/**
+ * @internal
+ */
+#[CoversClass(OrderStatusEnum::class)]
+final class OrderStatusEnumTest extends AbstractEnumTestCase
 {
     /**
      * 测试枚举值是否符合预期
      */
-    public function testEnumValues()
+    public function testEnumValues(): void
     {
         $this->assertSame('cancelled', OrderStatusEnum::CANCELLED->value);
         $this->assertSame('0', OrderStatusEnum::CREATE->value);
@@ -41,7 +48,7 @@ class OrderStatusEnumTest extends TestCase
     /**
      * 测试从值获取枚举用例
      */
-    public function testFromValue()
+    public function testFromValue(): void
     {
         $this->assertEquals(OrderStatusEnum::CANCELLED, OrderStatusEnum::from('cancelled'));
         $this->assertEquals(OrderStatusEnum::CREATE, OrderStatusEnum::from('0'));
@@ -52,7 +59,7 @@ class OrderStatusEnumTest extends TestCase
     /**
      * 测试无效值的情况
      */
-    public function testInvalidValue()
+    public function testInvalidValue(): void
     {
         $this->expectException(\ValueError::class);
         OrderStatusEnum::from('non_existent_value');
@@ -61,9 +68,35 @@ class OrderStatusEnumTest extends TestCase
     /**
      * 测试tryFrom方法
      */
-    public function testTryFrom()
+    public function testTryFrom(): void
     {
         $this->assertNull(OrderStatusEnum::tryFrom('non_existent_value'));
         $this->assertEquals(OrderStatusEnum::SIGN, OrderStatusEnum::tryFrom('1000'));
     }
-} 
+
+    /**
+     * 测试toArray方法
+     */
+    public function testToArray(): void
+    {
+        // 测试单个枚举实例的 toArray 方法
+        $createStatus = OrderStatusEnum::CREATE;
+        $result = $createStatus->toArray();
+
+        $this->assertArrayHasKey('value', $result);
+        $this->assertArrayHasKey('label', $result);
+        $this->assertEquals('0', $result['value']);
+        $this->assertEquals('已下单', $result['label']);
+
+        // 测试其他枚举值
+        $signStatus = OrderStatusEnum::SIGN;
+        $signResult = $signStatus->toArray();
+        $this->assertEquals('1000', $signResult['value']);
+        $this->assertEquals('已签收', $signResult['label']);
+
+        $cancelledStatus = OrderStatusEnum::CANCELLED;
+        $cancelledResult = $cancelledStatus->toArray();
+        $this->assertEquals('cancelled', $cancelledResult['value']);
+        $this->assertEquals('已取消', $cancelledResult['label']);
+    }
+}

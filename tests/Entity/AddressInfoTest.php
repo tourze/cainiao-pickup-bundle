@@ -1,71 +1,76 @@
 <?php
 
+declare(strict_types=1);
+
 namespace CainiaoPickupBundle\Tests\Entity;
 
 use CainiaoPickupBundle\Entity\AddressInfo;
-use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use Tourze\PHPUnitDoctrineEntity\AbstractEntityTestCase;
 
-class AddressInfoTest extends TestCase
+/**
+ * @internal
+ */
+#[CoversClass(AddressInfo::class)]
+final class AddressInfoTest extends AbstractEntityTestCase
 {
-    private AddressInfo $addressInfo;
-
-    protected function setUp(): void
+    protected function createEntity(): object
     {
-        $this->addressInfo = new AddressInfo();
+        return new AddressInfo();
     }
 
-    public function testGetterSetter_basicProperties(): void
+    /**
+     * 提供属性及其样本值的 Data Provider.
+     *
+     * @return iterable<string, array{string, mixed}>
+     */
+    public static function propertiesProvider(): iterable
     {
-        $this->addressInfo->setName('测试名称');
-        $this->addressInfo->setMobile('13800138000');
-        $this->addressInfo->setFullAddressDetail('北京市朝阳区三里屯街道10号');
-        
-        $this->assertSame('测试名称', $this->addressInfo->getName());
-        $this->assertSame('13800138000', $this->addressInfo->getMobile());
-        $this->assertSame('北京市朝阳区三里屯街道10号', $this->addressInfo->getFullAddressDetail());
+        yield 'name' => ['name', '测试名称'];
+        yield 'mobile' => ['mobile', '13800138000'];
+        yield 'fullAddressDetail' => ['fullAddressDetail', '北京市朝阳区三里屯街道10号'];
+        yield 'provinceName' => ['provinceName', '北京市'];
+        yield 'cityName' => ['cityName', '北京市'];
+        yield 'areaName' => ['areaName', '朝阳区'];
+        yield 'address' => ['address', '三里屯街道10号'];
     }
 
-    public function testGetterSetter_optionalProperties(): void
+    /**
+     * 测试 toApiFormat 方法
+     */
+    public function testToApiFormat(): void
     {
-        $this->addressInfo->setProvinceName('北京市');
-        $this->addressInfo->setCityName('北京市');
-        $this->addressInfo->setAreaName('朝阳区');
-        $this->addressInfo->setAddress('三里屯街道10号');
-        
-        $this->assertSame('北京市', $this->addressInfo->getProvinceName());
-        $this->assertSame('北京市', $this->addressInfo->getCityName());
-        $this->assertSame('朝阳区', $this->addressInfo->getAreaName());
-        $this->assertSame('三里屯街道10号', $this->addressInfo->getAddress());
+        $entity = $this->createEntity();
+        self::assertInstanceOf(AddressInfo::class, $entity);
+        $entity->setName('测试名称');
+        $entity->setMobile('13800138000');
+        $entity->setFullAddressDetail('北京市朝阳区三里屯街道10号');
+        $entity->setProvinceName('北京市');
+        $entity->setCityName('北京市');
+        $entity->setAreaName('朝阳区');
+        $entity->setAddress('三里屯街道10号');
+
+        $result = $entity->toApiFormat();
+
+        $this->assertSame('测试名称', $result['name']);
+        $this->assertSame('13800138000', $result['mobile']);
+        $this->assertSame('北京市朝阳区三里屯街道10号', $result['fullAddressDetail']);
+        $this->assertSame('北京市', $result['provinceName']);
+        $this->assertSame('北京市', $result['cityName']);
+        $this->assertSame('朝阳区', $result['areaName']);
+        $this->assertSame('三里屯街道10号', $result['address']);
     }
 
-    public function testFluentInterface_returnsObjectInstance(): void
+    /**
+     * 测试 __toString 方法
+     */
+    public function testToString(): void
     {
-        $result = $this->addressInfo->setName('测试名称');
-        $this->assertSame($this->addressInfo, $result);
-        
-        $result = $this->addressInfo->setMobile('13800138000');
-        $this->assertSame($this->addressInfo, $result);
-        
-        $result = $this->addressInfo->setFullAddressDetail('北京市朝阳区三里屯街道10号');
-        $this->assertSame($this->addressInfo, $result);
-    }
+        $entity = $this->createEntity();
+        self::assertInstanceOf(AddressInfo::class, $entity);
+        $entity->setName('测试名称');
+        $entity->setFullAddressDetail('北京市朝阳区三里屯街道10号');
 
-    public function testChainedCalls_setsAllProperties(): void
-    {
-        $this->addressInfo->setName('测试名称')
-            ->setMobile('13800138000')
-            ->setFullAddressDetail('北京市朝阳区三里屯街道10号')
-            ->setProvinceName('北京市')
-            ->setCityName('北京市')
-            ->setAreaName('朝阳区')
-            ->setAddress('三里屯街道10号');
-        
-        $this->assertSame('测试名称', $this->addressInfo->getName());
-        $this->assertSame('13800138000', $this->addressInfo->getMobile());
-        $this->assertSame('北京市朝阳区三里屯街道10号', $this->addressInfo->getFullAddressDetail());
-        $this->assertSame('北京市', $this->addressInfo->getProvinceName());
-        $this->assertSame('北京市', $this->addressInfo->getCityName());
-        $this->assertSame('朝阳区', $this->addressInfo->getAreaName());
-        $this->assertSame('三里屯街道10号', $this->addressInfo->getAddress());
+        $this->assertSame('测试名称 - 北京市朝阳区三里屯街道10号', (string) $entity);
     }
-} 
+}
