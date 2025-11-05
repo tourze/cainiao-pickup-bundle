@@ -131,9 +131,7 @@ class AddressInfoCrudControllerTest extends AbstractEasyAdminControllerTestCase
      */
     public function testValidationErrors(): void
     {
-        $client = self::createClientWithDatabase();
-        $this->createAdminUser('admin@test.com', 'password123');
-        $this->loginAsAdmin($client, 'admin@test.com', 'password123');
+        $client = $this->createAuthenticatedClient();
 
         // 测试空表单提交
         $crawler = $client->request('GET', $this->generateAdminUrl(Action::NEW));
