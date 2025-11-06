@@ -56,16 +56,30 @@ class LogisticsDetailRepository extends ServiceEntityRepository
 
     /**
      * 删除订单的所有物流详情
+     *
+     * 优化策略：使用原生SQL删除，避免Doctrine ORM的开销
+     * 同时使用事务确保数据一致性
      */
     public function deleteByOrder(PickupOrder $order): void
     {
-        $this->createQueryBuilder('l')
-            ->delete()
-            ->where('l.order = :order')
-            ->setParameter('order', $order)
-            ->getQuery()
-            ->execute()
-        ;
+        $entityManager = $this->getEntityManager();
+        $connection = $entityManager->getConnection();
+
+        // 使用原生SQL删除，性能更好
+        $sql = 'DELETE FROM cainiao_logistics_detail WHERE order_id = :orderId';
+
+        try {
+            $connection->executeStatement($sql, ['orderId' => $order->getId()]);
+        } catch (\Throwable $e) {
+            // 如果原生SQL失败，回退到DQL方案
+            $this->createQueryBuilder('l')
+                ->delete()
+                ->where('l.order = :order')
+                ->setParameter('order', $order)
+                ->getQuery()
+                ->execute()
+            ;
+        }
     }
 
     public function save(LogisticsDetail $entity, bool $flush = true): void

@@ -117,7 +117,14 @@ class SyncPickupOrderCommand extends Command
 
         // 更新订单信息
         $order->updateFromApiResponse($response);
-        $this->entityManager->flush();
+
+        try {
+            $this->entityManager->flush();
+        } catch (\Throwable $e) {
+            // 如果flush失败，尝试清理entity manager状态
+            $this->entityManager->refresh($order);
+            throw new OrderException(sprintf('Failed to save order %s: %s', $order->getOrderCode(), $e->getMessage()), 0, $e);
+        }
 
         $this->logger->info('Synced pickup order', [
             'orderCode' => $order->getOrderCode(),

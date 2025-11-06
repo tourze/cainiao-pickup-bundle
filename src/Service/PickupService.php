@@ -46,15 +46,34 @@ readonly class PickupService
         $receiverInfo = $this->createAddressInfo($data, 'receiver');
 
         $order = $this->buildPickupOrder($data, $config, $senderInfo, $receiverInfo);
-        $this->entityManager->persist($order);
-        $this->entityManager->flush();
 
-        $this->cainiaoHttpClient->createPickupOrder($order);
-        $this->entityManager->flush();
+        // 开启事务
+        $this->entityManager->beginTransaction();
+        try {
+            $this->entityManager->persist($order);
+            $this->entityManager->flush();
 
-        $this->logOrderCreated($order);
+            // 调用外部菜鸟API
+            $this->cainiaoHttpClient->createPickupOrder($order);
+            $this->entityManager->flush();
 
-        return $order;
+            // 提交事务
+            $this->entityManager->commit();
+
+            $this->logOrderCreated($order);
+
+            return $order;
+        } catch (\Throwable $e) {
+            // 回滚事务
+            $this->entityManager->rollback();
+
+            $this->logger->error('Failed to create pickup order', [
+                'orderCode' => $order->getOrderCode(),
+                'error' => $e->getMessage(),
+            ]);
+
+            throw $e;
+        }
     }
 
     private function getValidConfig(): CainiaoConfig
@@ -443,10 +462,13 @@ readonly class PickupService
     }
 
     /**
-     * 生成订单号
+     * 生成订单号 - 使用加密安全的随机数生成器
      */
     private function generateOrderCode(): string
     {
-        return 'PK' . date('YmdHis') . rand(1000, 9999);
+        $timestamp = date('YmdHis');
+        $randomPart = random_int(1000, 9999);
+
+        return 'PK' . $timestamp . $randomPart;
     }
 }

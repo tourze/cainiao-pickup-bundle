@@ -376,11 +376,123 @@ readonly class CainiaoHttpClient
         } catch (\Throwable $e) {
             $this->logger->error('Cainiao API request failed', [
                 'url' => $url,
-                'request' => $requestData,
+                'request' => $this->sanitizeRequestData($requestData),
                 'error' => $e->getMessage(),
             ]);
             throw $e;
         }
+    }
+
+      /**
+     * 脱敏请求数据，移除敏感信息
+     *
+     * @param array<string, mixed> $requestData
+     * @return array<string, mixed>
+     */
+    private function sanitizeRequestData(array $requestData): array
+    {
+        $sanitized = $requestData;
+
+        $sanitized['logistics_interface'] = $this->sanitizeLogisticsInterface(
+            $sanitized['logistics_interface'] ?? null
+        );
+
+        // 脱敏签名
+        if (isset($sanitized['data_digest'])) {
+            $sanitized['data_digest'] = $this->maskSensitiveData($sanitized['data_digest']);
+        }
+
+        return $sanitized;
+    }
+
+    /**
+     * 脱敏logistics_interface字段
+     */
+    private function sanitizeLogisticsInterface(?string $logisticsInterface): string
+    {
+        if (!is_string($logisticsInterface)) {
+            return '[MISSING_DATA]';
+        }
+
+        try {
+            $logisticsData = json_decode($logisticsInterface, true);
+            if (!is_array($logisticsData)) {
+                return '[INVALID_JSON]';
+            }
+
+            $this->sanitizeAccessCode($logisticsData);
+            $this->sanitizeRequestDataInLogistics($logisticsData);
+
+            return json_encode($logisticsData);
+        } catch (\Throwable $e) {
+            return '[SANITIZED_DATA]';
+        }
+    }
+
+    /**
+     * 脱敏accessCode
+     */
+    private function sanitizeAccessCode(array &$logisticsData): void
+    {
+        if (isset($logisticsData['accessOption']['accessCode'])) {
+            $logisticsData['accessOption']['accessCode'] = $this->maskSensitiveData(
+                $logisticsData['accessOption']['accessCode']
+            );
+        }
+    }
+
+    /**
+     * 脱敏logistics中的request数据
+     */
+    private function sanitizeRequestDataInLogistics(array &$logisticsData): void
+    {
+        if (isset($logisticsData['request']) && is_array($logisticsData['request'])) {
+            $logisticsData['request'] = $this->sanitizeRequestFields($logisticsData['request']);
+        }
+    }
+
+    /**
+     * 脱敏请求字段中的敏感信息
+     *
+     * @param array<string, mixed> $request
+     * @return array<string, mixed>
+     */
+    private function sanitizeRequestFields(array $request): array
+    {
+        $sensitiveFields = [
+            'senderPhone', 'receiverPhone', 'senderFullAddress', 'receiverFullAddress',
+            'address', 'mobile', 'phone'
+        ];
+
+        foreach ($request as $key => $value) {
+            if (in_array($key, $sensitiveFields, true) && is_string($value)) {
+                $request[$key] = $this->maskSensitiveData($value);
+            }
+
+            // 递归处理嵌套数组
+            if (is_array($value)) {
+                $request[$key] = $this->sanitizeRequestFields($value);
+            }
+        }
+
+        return $request;
+    }
+
+    /**
+     * 掩码敏感数据，只显示前3位和后3位
+     */
+    private function maskSensitiveData(string $data): string
+    {
+        $length = strlen($data);
+        if ($length <= 6) {
+            return str_repeat('*', $length);
+        }
+
+        $prefix = substr($data, 0, 3);
+        $suffix = substr($data, -3);
+        $maskedLength = $length - 6;
+
+        return $prefix . str_repeat('*', $maskedLength) . $suffix;
     }
 
     /**

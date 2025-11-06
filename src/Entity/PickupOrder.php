@@ -374,6 +374,16 @@ class PickupOrder implements \Stringable
      */
     public function toPreQueryApiFormat(): array
     {
+        return $this->buildPreQueryData();
+    }
+
+    /**
+     * 构建预查询数据结构
+     *
+     * @return array<string, mixed>
+     */
+    private function buildPreQueryData(): array
+    {
         $data = [
             'queryCondition' => [
                 'senderInfo' => $this->senderInfo->toApiFormat(),
@@ -382,11 +392,21 @@ class PickupOrder implements \Stringable
             ],
         ];
 
+        $this->addExternalUserIdToQuery($data);
+
+        return $data;
+    }
+
+    /**
+     * 添加外部用户ID到查询条件
+     *
+     * @param array<string, mixed> $data
+     */
+    private function addExternalUserIdToQuery(array &$data): void
+    {
         if (null !== $this->externalUserId) {
             $data['queryCondition']['externalUserId'] = $this->externalUserId;
         }
-
-        return $data;
     }
 
     /**
@@ -396,7 +416,30 @@ class PickupOrder implements \Stringable
      */
     public function toCreateOrderApiFormat(): array
     {
-        $data = [
+        return $this->buildCreateOrderData();
+    }
+
+    /**
+     * 构建创建订单数据结构
+     *
+     * @return array<string, mixed>
+     */
+    private function buildCreateOrderData(): array
+    {
+        $data = $this->getCreateOrderBaseData();
+        $this->addOptionalFieldsToCreateOrder($data);
+
+        return $data;
+    }
+
+    /**
+     * 获取创建订单的基础数据
+     *
+     * @return array<string, mixed>
+     */
+    private function getCreateOrderBaseData(): array
+    {
+        return [
             'senderInfo' => $this->senderInfo->toApiFormat(),
             'receiverInfo' => $this->receiverInfo->toApiFormat(),
             'itemType' => 2,
@@ -413,18 +456,42 @@ class PickupOrder implements \Stringable
                 ],
             ],
         ];
+    }
 
-        // 添加可选字段
+    /**
+     * 添加可选字段到创建订单数据
+     *
+     * @param array<string, mixed> $data
+     */
+    private function addOptionalFieldsToCreateOrder(array &$data): void
+    {
+        $this->addPickupTimeToData($data);
+        $this->addRemarkToData($data);
+    }
+
+    /**
+     * 添加预约时间到数据
+     *
+     * @param array<string, mixed> $data
+     */
+    private function addPickupTimeToData(array &$data): void
+    {
         if (null !== $this->expectPickupTimeStart && null !== $this->expectPickupTimeEnd) {
             $data['appointGotStartTime'] = $this->getExpectPickupTimeStart();
             $data['appointGotEndTime'] = $this->getExpectPickupTimeEnd();
         }
+    }
 
+    /**
+     * 添加备注到数据
+     *
+     * @param array<string, mixed> $data
+     */
+    private function addRemarkToData(array &$data): void
+    {
         if (null !== $this->remark) {
             $data['userRemark'] = $this->getRemark();
         }
-
-        return $data;
     }
 
     /**
@@ -434,7 +501,30 @@ class PickupOrder implements \Stringable
      */
     public function toModifyOrderApiFormat(): array
     {
-        $data = [
+        return $this->buildModifyOrderData();
+    }
+
+    /**
+     * 构建修改订单数据结构
+     *
+     * @return array<string, mixed>
+     */
+    private function buildModifyOrderData(): array
+    {
+        $data = $this->getModifyOrderBaseData();
+        $this->addOptionalFieldsToModifyOrder($data);
+
+        return $data;
+    }
+
+    /**
+     * 获取修改订单的基础数据
+     *
+     * @return array<string, mixed>
+     */
+    private function getModifyOrderBaseData(): array
+    {
+        return [
             'orderId' => $this->cainiaoOrderCode,
             'cnAccountId' => $this->getConfig()->getAppKey(),
             'operatorType' => 1,
@@ -442,18 +532,17 @@ class PickupOrder implements \Stringable
             'senderInfo' => $this->senderInfo->toApiFormat(),
             'receiverInfo' => $this->receiverInfo->toApiFormat(),
         ];
+    }
 
-        // 添加可选字段
-        if (null !== $this->expectPickupTimeStart && null !== $this->expectPickupTimeEnd) {
-            $data['appointGotStartTime'] = $this->getExpectPickupTimeStart();
-            $data['appointGotEndTime'] = $this->getExpectPickupTimeEnd();
-        }
-
-        if (null !== $this->remark) {
-            $data['userRemark'] = $this->remark;
-        }
-
-        return $data;
+    /**
+     * 添加可选字段到修改订单数据
+     *
+     * @param array<string, mixed> $data
+     */
+    private function addOptionalFieldsToModifyOrder(array &$data): void
+    {
+        $this->addPickupTimeToData($data);
+        $this->addRemarkToData($data);
     }
 
     /**
@@ -563,10 +652,18 @@ class PickupOrder implements \Stringable
     private function updatePayInfo(array $payInfo): void
     {
         if (isset($payInfo['weight'])) {
-            $this->setWeight($this->castToFloat($payInfo['weight']));
+            try {
+                $this->setWeight($this->castToFloat($payInfo['weight']));
+            } catch (\InvalidArgumentException) {
+                // 忽略无效的weight数据，保持原有值
+            }
         }
         if (isset($payInfo['totalPrice'])) {
-            $this->setItemValue($this->castToNullableFloat($payInfo['totalPrice']));
+            try {
+                $this->setItemValue($this->castToNullableFloat($payInfo['totalPrice']));
+            } catch (\InvalidArgumentException) {
+                // 忽略无效的totalPrice数据，保持原有值
+            }
         }
     }
 
@@ -613,7 +710,11 @@ class PickupOrder implements \Stringable
         if (isset($logisticsDetail['updateTime'])) {
             $updateTime = $this->castToNullableString($logisticsDetail['updateTime']);
             if (null !== $updateTime) {
-                $this->setLastUpdateTime(new \DateTimeImmutable($updateTime));
+                try {
+                    $this->setLastUpdateTime(new \DateTimeImmutable($updateTime));
+                } catch (\Exception) {
+                    // 忽略无效的日期格式，保持原有值
+                }
             }
         }
     }
