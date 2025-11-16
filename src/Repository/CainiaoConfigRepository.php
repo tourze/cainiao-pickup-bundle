@@ -21,7 +21,6 @@ class CainiaoConfigRepository extends ServiceEntityRepository
     {
         /** @var class-string<CainiaoConfig> */
         $entityClass = CainiaoConfig::class;
-        /** @phpstan-ignore-next-line */
         parent::__construct($registry, $entityClass);
     }
 

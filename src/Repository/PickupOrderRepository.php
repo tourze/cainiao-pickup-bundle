@@ -22,7 +22,6 @@ class PickupOrderRepository extends ServiceEntityRepository
     {
         /** @var class-string<PickupOrder> */
         $entityClass = PickupOrder::class;
-        /** @phpstan-ignore-next-line */
         parent::__construct($registry, $entityClass);
     }
 
@@ -42,7 +41,6 @@ class PickupOrderRepository extends ServiceEntityRepository
     {
         $result = $this->findBy(['status' => $status]);
 
-        /** @phpstan-ignore-next-line */
         return array_values($result);
     }
 
@@ -75,7 +73,6 @@ class PickupOrderRepository extends ServiceEntityRepository
             return [];
         }
 
-        /** @phpstan-ignore-next-line */
         return array_values($result);
     }
 

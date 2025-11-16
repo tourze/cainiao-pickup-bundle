@@ -22,7 +22,6 @@ class LogisticsDetailRepository extends ServiceEntityRepository
     {
         /** @var class-string<LogisticsDetail> */
         $entityClass = LogisticsDetail::class;
-        /** @phpstan-ignore-next-line */
         parent::__construct($registry, $entityClass);
     }
 
@@ -39,7 +38,6 @@ class LogisticsDetailRepository extends ServiceEntityRepository
             ['logisticsTime' => 'DESC']
         );
 
-        /** @phpstan-ignore-next-line */
         return array_values($result);
     }
 
